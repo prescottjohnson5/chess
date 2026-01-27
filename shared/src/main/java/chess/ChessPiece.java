@@ -499,7 +499,7 @@ public class ChessPiece {
 
         if (this.pieceType == PieceType.KING) {
             if (myPosition.getRow() < 8) {
-                ChessPosition up = new ChessPosition(curr.getRow() + 1, curr.getColumn());
+                ChessPosition up = new ChessPosition(myPosition.getRow() + 1, myPosition.getColumn());
                 ChessPiece upPiece = board.getPiece(up);
                 if (upPiece == null) {
                     moves.add(new ChessMove(myPosition, up, null));
@@ -510,7 +510,7 @@ public class ChessPiece {
                 }
             }
             if (myPosition.getRow() > 1) {
-                ChessPosition down = new ChessPosition(curr.getRow() - 1, curr.getColumn());
+                ChessPosition down = new ChessPosition(myPosition.getRow() - 1, myPosition.getColumn());
                 ChessPiece downPiece = board.getPiece(down);
                 if (downPiece == null) {
                     moves.add(new ChessMove(myPosition, down, null));
@@ -521,7 +521,7 @@ public class ChessPiece {
                 }
             }
             if (myPosition.getColumn() < 8) {
-                ChessPosition right = new ChessPosition(curr.getRow(), curr.getColumn() + 1);
+                ChessPosition right = new ChessPosition(myPosition.getRow(), myPosition.getColumn() + 1);
                 ChessPiece rightPiece = board.getPiece(right);
                 if (rightPiece == null) {
                     moves.add(new ChessMove(myPosition, right, null));
@@ -532,7 +532,7 @@ public class ChessPiece {
                 }
             }
             if (myPosition.getColumn() > 1) {
-                ChessPosition left = new ChessPosition(curr.getRow(), curr.getColumn() - 1);
+                ChessPosition left = new ChessPosition(myPosition.getRow(), myPosition.getColumn() - 1);
                 ChessPiece leftPiece = board.getPiece(left);
                 if (leftPiece == null) {
                     moves.add(new ChessMove(myPosition, left, null));
@@ -544,7 +544,7 @@ public class ChessPiece {
             }
 
             if (myPosition.getRow() < 8 && myPosition.getColumn() < 8) {
-                ChessPosition upRight = new ChessPosition(curr.getRow() + 1, curr.getColumn() + 1);
+                ChessPosition upRight = new ChessPosition(myPosition.getRow() + 1, myPosition.getColumn() + 1);
                 ChessPiece upRightPiece = board.getPiece(upRight);
                 if (upRightPiece == null) {
                     moves.add(new ChessMove(myPosition, upRight, null));
@@ -555,7 +555,7 @@ public class ChessPiece {
                 }
             }
             if (myPosition.getRow() < 8 && myPosition.getColumn() > 1) {
-                ChessPosition upLeft = new ChessPosition(curr.getRow() + 1, curr.getColumn() - 1);
+                ChessPosition upLeft = new ChessPosition(myPosition.getRow() + 1, myPosition.getColumn() - 1);
                 ChessPiece upLeftPiece = board.getPiece(upLeft);
                 if (upLeftPiece == null) {
                     moves.add(new ChessMove(myPosition, upLeft, null));
@@ -566,7 +566,7 @@ public class ChessPiece {
                 }
             }
             if (myPosition.getRow() > 1 && myPosition.getColumn() < 8) {
-                ChessPosition downRight = new ChessPosition(curr.getRow() - 1, curr.getColumn() + 1);
+                ChessPosition downRight = new ChessPosition(myPosition.getRow() - 1, myPosition.getColumn() + 1);
                 ChessPiece downRightPiece = board.getPiece(downRight);
                 if (downRightPiece == null) {
                     moves.add(new ChessMove(myPosition, downRight, null));
@@ -577,7 +577,7 @@ public class ChessPiece {
                 }
             }
             if (myPosition.getRow() > 1 && myPosition.getColumn() > 1) {
-                ChessPosition downLeft = new ChessPosition(curr.getRow() - 1, curr.getColumn() - 1);
+                ChessPosition downLeft = new ChessPosition(myPosition.getRow() - 1, myPosition.getColumn() - 1);
                 ChessPiece downLeftPiece = board.getPiece(downLeft);
                 if (downLeftPiece == null) {
                     moves.add(new ChessMove(myPosition, downLeft, null));
