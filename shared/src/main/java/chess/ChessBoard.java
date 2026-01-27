@@ -9,7 +9,6 @@ package chess;
 public class ChessBoard {
     ChessPiece[][] board = new ChessPiece[8][8];
     public ChessBoard() {
-        
     }
 
     /**
@@ -30,7 +29,7 @@ public class ChessBoard {
      * position
      */
     public ChessPiece getPiece(ChessPosition position) {
-        if (board[position.getRow()][position.getColumn()] != null) {
+        if (board[position.getRow() - 1][position.getColumn() - 1] != null) {
             return board[position.getRow() - 1][position.getColumn() - 1];
         } else {
             return null;
@@ -93,22 +92,22 @@ public class ChessBoard {
         board[1][6] = whitePawn7;
         board[1][7] = whitePawn8;
 
-        board[7][0] = whiteRook1;
-        board[7][1] = whiteKnight1;
-        board[7][2] = whiteBishop1;
-        board[7][3] = whiteQueen;
-        board[7][4] = whiteKing;
-        board[7][5] = whiteBishop2;
-        board[7][6] = whiteKnight2;
-        board[7][7] = whiteRook2;
-        board[6][0] = whitePawn1;
-        board[6][1] = whitePawn2;
-        board[6][2] = whitePawn3;
-        board[6][3] = whitePawn4;
-        board[6][4] = whitePawn5;
-        board[6][5] = whitePawn6;
-        board[6][6] = whitePawn7;
-        board[6][7] = whitePawn8;
+        board[7][0] = blackRook1;
+        board[7][1] = blackKnight1;
+        board[7][2] = blackBishop1;
+        board[7][3] = blackQueen;
+        board[7][4] = blackKing;
+        board[7][5] = blackBishop2;
+        board[7][6] = blackKnight2;
+        board[7][7] = blackRook2;
+        board[6][0] = blackPawn1;
+        board[6][1] = blackPawn2;
+        board[6][2] = blackPawn3;
+        board[6][3] = blackPawn4;
+        board[6][4] = blackPawn5;
+        board[6][5] = blackPawn6;
+        board[6][6] = blackPawn7;
+        board[6][7] = blackPawn8;
 
     }
 }
