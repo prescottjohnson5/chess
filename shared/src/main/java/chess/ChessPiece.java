@@ -51,7 +51,7 @@ public class ChessPiece {
      * @return Collection of valid moves
      */
     public Collection<ChessMove> pieceMoves(ChessBoard board, ChessPosition myPosition) {
-        Collection<ChessMove> moves = new Collection<>();
+        Collection<ChessMove> moves = new ArrayList<>();
         if (this.getPieceType() == ChessPiece.PieceType.PAWN) {
             if (this.getTeamColor() == ChessGame.TeamColor.WHITE) {
                 ChessPosition oneForward = new ChessPosition(myPosition.getRow() + 1, myPosition.getColumn());
