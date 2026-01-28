@@ -22,7 +22,7 @@ public class ChessPiece {
     }
 
     @Override
-    public boolean hashCode() {
+    public int hashCode() {
         return Objects.hash(color, pieceType);
     }
 

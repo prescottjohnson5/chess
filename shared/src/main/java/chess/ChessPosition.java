@@ -23,7 +23,7 @@ public class ChessPosition {
     }
 
     @Override
-    public boolean hashCode() {
+    public int hashCode() {
         return Objects.hash(board_row, board_col);
     }
 

@@ -1,5 +1,6 @@
 package chess;
 
+import util.java.Objects;
 /**
  * Represents moving a chess piece on a chessboard
  * <p>
@@ -15,11 +16,11 @@ public class ChessMove {
             return false;
         }
         ChessMove that = (ChessMove) instance;
-        return start == that.start && end == that.end && pieceType == that.pieceType;
+        return Object.equals(start, that.start) && Object.equals(end, that.end) && pieceType == that.pieceType;
     }
 
     @Override
-    public boolean hashCode() {
+    public int hashCode() {
         return Objects.hash(start, end);
     }
 
