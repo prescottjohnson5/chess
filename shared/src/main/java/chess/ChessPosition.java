@@ -1,5 +1,9 @@
 package chess;
 
+import java.util.Objects;
+
+import org.junit.jupiter.api.ClassOrderer;
+
 /**
  * Represents a single square position on a chess board
  * <p>
@@ -7,6 +11,22 @@ package chess;
  * signature of the existing methods.
  */
 public class ChessPosition {
+    @Override
+    public boolean equals(Object instance) {
+        if (this == instance) {
+            return true;
+        } else if (instance == null || getClass() != instance.getClass()){
+            return false;
+        }
+        ChessPosition that = (ChessPosition) instance;
+        return board_row == that.board_row && board_col == that.board_col;
+    }
+
+    @Override
+    public boolean hashCode() {
+        return Objects.hash(board_row, board_col);
+    }
+
     int board_row;
     int board_col;
 

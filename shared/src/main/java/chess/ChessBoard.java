@@ -7,6 +7,22 @@ package chess;
  * signature of the existing methods.
  */
 public class ChessBoard {
+    @Override
+    public boolean equals(Object instance) {
+        if (this == instance) {
+            return true;
+        } else if (instance == null || getClass() != instance.getClass()){
+            return false;
+        }
+        ChessBoard that = (ChessBoard) instance;
+        return Arrays.deepEquals(board, that.board);
+    }
+
+    @Override
+    public boolean hashCode() {
+        return Objects.deepHash(board);
+    }
+
     ChessPiece[][] board = new ChessPiece[8][8];
     public ChessBoard() {
     }

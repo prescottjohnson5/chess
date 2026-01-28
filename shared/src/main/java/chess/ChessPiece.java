@@ -2,6 +2,7 @@ package chess;
 
 import java.util.Collection;
 import java.util.ArrayList;
+import java.util.Objects;
 /**
  * Represents a single chess piece
  * <p>
@@ -9,6 +10,22 @@ import java.util.ArrayList;
  * signature of the existing methods.
  */
 public class ChessPiece {
+    @Override
+    public boolean equals(Object instance) {
+        if (this == instance) {
+            return true;
+        } else if (instance == null || getClass() != instance.getClass()){
+            return false;
+        }
+        ChessPiece that = (ChessPiece) instance;
+        return color == that.color && pieceType == that.pieceType;
+    }
+
+    @Override
+    public boolean hashCode() {
+        return Objects.hash(color, pieceType);
+    }
+
     ChessGame.TeamColor color;
     ChessPiece.PieceType pieceType;
 

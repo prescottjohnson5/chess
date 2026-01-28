@@ -7,6 +7,22 @@ package chess;
  * signature of the existing methods.
  */
 public class ChessMove {
+    @Override
+    public boolean equals(Object instance) {
+        if (this == instance) {
+            return true;
+        } else if (instance == null || getClass() != instance.getClass()){
+            return false;
+        }
+        ChessMove that = (ChessMove) instance;
+        return start == that.start && end == that.end && pieceType == that.pieceType;
+    }
+
+    @Override
+    public boolean hashCode() {
+        return Objects.hash(start, end);
+    }
+
     ChessPosition start;
     ChessPosition end;
     ChessPiece.PieceType pieceType;
