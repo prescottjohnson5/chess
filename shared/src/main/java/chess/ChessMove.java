@@ -1,6 +1,6 @@
 package chess;
 
-import util.java.Objects;
+import java.util.Objects;
 /**
  * Represents moving a chess piece on a chessboard
  * <p>
@@ -16,12 +16,12 @@ public class ChessMove {
             return false;
         }
         ChessMove that = (ChessMove) instance;
-        return Object.equals(start, that.start) && Object.equals(end, that.end) && pieceType == that.pieceType;
+        return Objects.equals(start, that.start) && Objects.equals(end, that.end) && pieceType == that.pieceType;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(start, end);
+        return Objects.hash(start, end, pieceType);
     }
 
     ChessPosition start;
