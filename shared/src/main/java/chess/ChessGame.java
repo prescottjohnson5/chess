@@ -14,6 +14,7 @@ public class ChessGame {
     int num2;
     int num3;
     int num4;
+    int num5;
         @Override
     public boolean equals(Object o) {
         if (this == o) return true;
