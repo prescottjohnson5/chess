@@ -10,6 +10,7 @@ import java.util.Objects;
  * signature of the existing methods.
  */
 public class ChessGame {
+    int num;
         @Override
     public boolean equals(Object o) {
         if (this == o) return true;
