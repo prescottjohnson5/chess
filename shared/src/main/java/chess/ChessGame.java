@@ -13,6 +13,7 @@ public class ChessGame {
     int num;
     int num2;
     int num3;
+    int num4;
         @Override
     public boolean equals(Object o) {
         if (this == o) return true;
