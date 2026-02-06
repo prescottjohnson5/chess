@@ -12,6 +12,7 @@ import java.util.Objects;
 public class ChessGame {
     int num;
     int num2;
+    int num3;
         @Override
     public boolean equals(Object o) {
         if (this == o) return true;
