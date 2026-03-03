@@ -12,6 +12,7 @@ import service.exceptions.UnauthorizedException;
 import service.requests.CreateGameRequest;
 import service.requests.JoinGameRequest;
 import service.results.CreateGameResult;
+import service.results.ListGamesResult;
 
 public class GameService {
     private final GameDAO gameDAO;
