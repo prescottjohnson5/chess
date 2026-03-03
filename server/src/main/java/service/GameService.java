@@ -25,7 +25,8 @@ public class GameService {
 
     public ListGamesResult listGames(String authToken) throws UnauthorizedException, DataAccessException {
         requireAuth(authToken);
-        return new ListGamesResult(gameDAO.getAllGames());
+        GameData[] games = gameDAO.getAllGames().toArray(new GameData[0]);
+        return new ListGamesResult(games);
     }
 
     public CreateGameResult createGame(String authToken, CreateGameRequest r)
@@ -47,7 +48,7 @@ public class GameService {
 
         AuthData auth = requireAuth(authToken);
         if (r == null) throw new BadRequestException("bad request");
-        if (r.playerColor() == null) throw new BadRequestException("bad request");
+        if (r.playerColor() == null || r.gameID() == null) throw new BadRequestException("bad request");
 
         GameData game = gameDAO.getGame(r.gameID());
         if (game == null) throw new BadRequestException("bad request");
