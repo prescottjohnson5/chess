@@ -24,13 +24,13 @@ public class UserHandler {
         try {
             RegisterRequest req = gson.fromJson(ctx.body(), RegisterRequest.class);
             var res = service.register(req);
-            ctx.status(200).json(res);
+            ctx.status(200).result(gson.toJson(res));
         } catch (BadRequestException e) {
-            ctx.status(400).json(Map.of("message", "Error: bad request"));
+            ctx.status(400).result(gson.toJson(Map.of("message", "Error: bad request")));
         } catch (AlreadyTakenException e) {
-            ctx.status(403).json(Map.of("message", "Error: already taken"));
+            ctx.status(403).result(gson.toJson(Map.of("message", "Error: already taken")));
         } catch (DataAccessException e) {
-            ctx.status(500).json(Map.of("message", "Error: " + e.getMessage()));
+            ctx.status(500).result(gson.toJson(Map.of("message", "Error: " + e.getMessage())));
         }
     }
 
@@ -38,13 +38,13 @@ public class UserHandler {
         try {
             LoginRequest req = gson.fromJson(ctx.body(), LoginRequest.class);
             var res = service.login(req);
-            ctx.status(200).json(res);
+            ctx.status(200).result(gson.toJson(res));
         } catch (BadRequestException e) {
-            ctx.status(400).json(Map.of("message", "Error: bad request"));
+            ctx.status(400).result(gson.toJson(Map.of("message", "Error: bad request")));
         } catch (UnauthorizedException e) {
-            ctx.status(401).json(Map.of("message", "Error: unauthorized"));
+            ctx.status(401).result(gson.toJson(Map.of("message", "Error: unauthorized")));
         } catch (DataAccessException e) {
-            ctx.status(500).json(Map.of("message", "Error: " + e.getMessage()));
+            ctx.status(500).result(gson.toJson(Map.of("message", "Error: " + e.getMessage())));
         }
     }
 
@@ -52,11 +52,11 @@ public class UserHandler {
         try {
             String token = ctx.header("authorization");
             service.logout(token);
-            ctx.status(200).json(Map.of());
+            ctx.status(200);
         } catch (UnauthorizedException e) {
-            ctx.status(401).json(Map.of("message", "Error: unauthorized"));
+            ctx.status(401).result(gson.toJson(Map.of("message", "Error: unauthorized")));
         } catch (DataAccessException e) {
-            ctx.status(500).json(Map.of("message", "Error: " + e.getMessage()));
+            ctx.status(500).result(gson.toJson(Map.of("message", "Error: " + e.getMessage())));
         }
     }
 }
