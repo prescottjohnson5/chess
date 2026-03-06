@@ -20,8 +20,12 @@ public class ChessGame {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         ChessGame chessGame = (ChessGame) o;
         return Objects.equals(currentBoard, chessGame.currentBoard) &&
             currentTurn == chessGame.currentTurn;
@@ -190,19 +194,7 @@ public class ChessGame {
         if (!this.isInCheck(teamColor)) {
             return false;
         }
-        for (int row = BOARD_MIN; row <= BOARD_MAX; row++) {
-            for (int col = BOARD_MIN; col <= BOARD_MAX; col++) {
-                ChessPosition position = new ChessPosition(row, col);
-                ChessPiece piece = currentBoard.getPiece(position);
-                if (piece != null && piece.getTeamColor() == teamColor) {
-                    Collection<ChessMove> legalMoves = validMoves(position);
-                    if (!legalMoves.isEmpty()) {
-                        return false;
-                    }
-                }
-            }
-        }
-        return true;
+        return !teamHasAnyLegalMove(teamColor);
     }
 
     /**
@@ -216,6 +208,10 @@ public class ChessGame {
         if (this.isInCheck(teamColor)) {
             return false;
         }
+        return !teamHasAnyLegalMove(teamColor);
+    }
+
+    private boolean teamHasAnyLegalMove(TeamColor teamColor) {
         for (int row = BOARD_MIN; row <= BOARD_MAX; row++) {
             for (int col = BOARD_MIN; col <= BOARD_MAX; col++) {
                 ChessPosition position = new ChessPosition(row, col);
@@ -223,12 +219,12 @@ public class ChessGame {
                 if (piece != null && piece.getTeamColor() == teamColor) {
                     Collection<ChessMove> legalMoves = validMoves(position);
                     if (!legalMoves.isEmpty()) {
-                        return false;
+                        return true;
                     }
                 }
             }
         }
-        return true;
+        return false;
     }
 
     /**

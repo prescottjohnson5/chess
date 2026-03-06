@@ -19,20 +19,20 @@ public class ChessPosition {
             return false;
         }
         ChessPosition that = (ChessPosition) instance;
-        return board_row == that.board_row && board_col == that.board_col;
+        return boardRow == that.boardRow && boardCol == that.boardCol;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(board_row, board_col);
+        return Objects.hash(boardRow, boardCol);
     }
 
-    int board_row;
-    int board_col;
+    private final int boardRow;
+    private final int boardCol;
 
     public ChessPosition(int row, int col) {
-        board_row = row;
-        board_col = col;
+        this.boardRow = row;
+        this.boardCol = col;
     }
 
     /**
@@ -40,7 +40,7 @@ public class ChessPosition {
      * 1 codes for the bottom row
      */
     public int getRow() {
-        return board_row;
+        return boardRow;
     }
 
     /**
@@ -48,6 +48,6 @@ public class ChessPosition {
      * 1 codes for the left row
      */
     public int getColumn() {
-        return board_col;
+        return boardCol;
     }
 }
