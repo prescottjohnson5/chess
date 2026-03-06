@@ -13,7 +13,6 @@ import service.requests.RegisterRequest;
 import service.results.LoginResult;
 import service.results.RegisterResult;
 
-
 import java.util.UUID;
 
 public class UserService {
@@ -25,58 +24,62 @@ public class UserService {
         this.authDAO = authDAO;
     }
 
-    public RegisterResult register(RegisterRequest r)
+    public RegisterResult register(RegisterRequest request)
             throws BadRequestException, AlreadyTakenException, DataAccessException {
-
-        if (r == null ||
-                r.username() == null || r.password() == null || r.email() == null ||
-                r.username().isEmpty() || r.password().isEmpty() || r.email().isEmpty()) {
+        if (!isValidRegisterRequest(request)) {
             throw new BadRequestException("bad request");
         }
-
-        if (userDAO.getUser(r.username()) != null) {
+        if (userDAO.getUser(request.username()) != null) {
             throw new AlreadyTakenException("already taken");
         }
 
-        userDAO.createUser(new UserData(r.username(), r.password(), r.email()));
-
-        String token = UUID.randomUUID().toString();
-        authDAO.createAuth(new AuthData(token, r.username()));
-
-        return new RegisterResult(r.username(), token);
+        userDAO.createUser(new UserData(request.username(), request.password(), request.email()));
+        String authToken = UUID.randomUUID().toString();
+        authDAO.createAuth(new AuthData(authToken, request.username()));
+        return new RegisterResult(request.username(), authToken);
     }
 
-    public LoginResult login(LoginRequest r)
+    public LoginResult login(LoginRequest request)
             throws BadRequestException, UnauthorizedException, DataAccessException {
-
-        if (r == null ||
-                r.username() == null || r.password() == null ||
-                r.username().isEmpty() || r.password().isEmpty()) {
+        if (!isValidLoginRequest(request)) {
             throw new BadRequestException("bad request");
         }
-
-        UserData user = userDAO.getUser(r.username());
-        if (user == null || !user.password().equals(r.password())) {
+        UserData user = userDAO.getUser(request.username());
+        if (user == null || !user.password().equals(request.password())) {
             throw new UnauthorizedException("unauthorized");
         }
 
-        String token = UUID.randomUUID().toString();
-        authDAO.createAuth(new AuthData(token, r.username()));
-
-        return new LoginResult(r.username(), token);
+        String authToken = UUID.randomUUID().toString();
+        authDAO.createAuth(new AuthData(authToken, request.username()));
+        return new LoginResult(request.username(), authToken);
     }
 
     public void logout(String authToken) throws UnauthorizedException, DataAccessException {
-        if (authToken == null || authToken.isEmpty()) throw new UnauthorizedException("unauthorized");
-
+        if (authToken == null || authToken.isEmpty()) {
+            throw new UnauthorizedException("unauthorized");
+        }
         AuthData auth = authDAO.getAuth(authToken);
-        if (auth == null) throw new UnauthorizedException("unauthorized");
-
+        if (auth == null) {
+            throw new UnauthorizedException("unauthorized");
+        }
         authDAO.deleteAuth(authToken);
     }
 
     public void clear() throws DataAccessException {
         authDAO.clear();
         userDAO.clear();
+    }
+
+    private static boolean isValidRegisterRequest(RegisterRequest request) {
+        return request != null
+                && request.username() != null && !request.username().isEmpty()
+                && request.password() != null && !request.password().isEmpty()
+                && request.email() != null && !request.email().isEmpty();
+    }
+
+    private static boolean isValidLoginRequest(LoginRequest request) {
+        return request != null
+                && request.username() != null && !request.username().isEmpty()
+                && request.password() != null && !request.password().isEmpty();
     }
 }

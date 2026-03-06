@@ -10,7 +10,9 @@ public class MemoryGameDAO implements GameDAO {
 
     @Override
     public int createGame(GameData game) throws DataAccessException {
-        if (game == null) throw new DataAccessException("game cannot be null");
+        if (game == null) {
+            throw new DataAccessException("game cannot be null");
+        }
         int id = nextId++;
         GameData stored = new GameData(id, game.whiteUsername(), game.blackUsername(), game.gameName(), game.game());
         games.put(id, stored);
@@ -29,8 +31,12 @@ public class MemoryGameDAO implements GameDAO {
 
     @Override
     public void updateGame(GameData game) throws DataAccessException {
-        if (game == null) throw new DataAccessException("game cannot be null");
-        if (!games.containsKey(game.gameID())) throw new DataAccessException("game does not exist");
+        if (game == null) {
+            throw new DataAccessException("game cannot be null");
+        }
+        if (!games.containsKey(game.gameID())) {
+            throw new DataAccessException("game does not exist");
+        }
         games.put(game.gameID(), game);
     }
 

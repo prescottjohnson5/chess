@@ -9,6 +9,8 @@ import service.exceptions.BadRequestException;
 import service.exceptions.UnauthorizedException;
 import service.requests.CreateGameRequest;
 import service.requests.JoinGameRequest;
+import service.results.CreateGameResult;
+import service.results.ListGamesResult;
 
 import java.util.Map;
 
@@ -22,9 +24,9 @@ public class GameHandler {
 
     public void listGames(Context ctx) {
         try {
-            String token = ctx.header("authorization");
-            var res = service.listGames(token);
-            ctx.status(200).result(gson.toJson(Map.of("games", res.games())));
+            String authToken = ctx.header("authorization");
+            ListGamesResult result = service.listGames(authToken);
+            ctx.status(200).result(gson.toJson(Map.of("games", result.games())));
         } catch (UnauthorizedException e) {
             ctx.status(401).result(gson.toJson(Map.of("message", "Error: unauthorized")));
         } catch (DataAccessException e) {
@@ -34,10 +36,10 @@ public class GameHandler {
 
     public void createGame(Context ctx) {
         try {
-            String token = ctx.header("authorization");
-            CreateGameRequest req = gson.fromJson(ctx.body(), CreateGameRequest.class);
-            var res = service.createGame(token, req);
-            ctx.status(200).result(gson.toJson(res));
+            String authToken = ctx.header("authorization");
+            CreateGameRequest request = gson.fromJson(ctx.body(), CreateGameRequest.class);
+            CreateGameResult result = service.createGame(authToken, request);
+            ctx.status(200).result(gson.toJson(result));
         } catch (BadRequestException e) {
             ctx.status(400).result(gson.toJson(Map.of("message", "Error: bad request")));
         } catch (UnauthorizedException e) {
@@ -49,9 +51,9 @@ public class GameHandler {
 
     public void joinGame(Context ctx) {
         try {
-            String token = ctx.header("authorization");
-            JoinGameRequest req = gson.fromJson(ctx.body(), JoinGameRequest.class);
-            service.joinGame(token, req);
+            String authToken = ctx.header("authorization");
+            JoinGameRequest request = gson.fromJson(ctx.body(), JoinGameRequest.class);
+            service.joinGame(authToken, request);
             ctx.status(200);
         } catch (BadRequestException e) {
             ctx.status(400).result(gson.toJson(Map.of("message", "Error: bad request")));

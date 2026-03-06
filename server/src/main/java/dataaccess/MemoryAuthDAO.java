@@ -10,7 +10,9 @@ public class MemoryAuthDAO implements AuthDAO {
 
     @Override
     public void createAuth(AuthData auth) throws DataAccessException {
-        if (auth == null) throw new DataAccessException("auth cannot be null");
+        if (auth == null) {
+            throw new DataAccessException("auth cannot be null");
+        }
         tokens.put(auth.authToken(), auth);
     }
 
