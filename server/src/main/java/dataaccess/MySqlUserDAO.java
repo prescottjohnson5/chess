@@ -16,18 +16,8 @@ public class MySqlUserDAO implements UserDAO {
         if (user == null) {
             throw new DataAccessException("user cannot be null");
         }
-        String hashedPassword = BCrypt.hashpw(user.password(), BCrypt.gensalt());
-
-        String sql = "INSERT INTO user (username, password, email) VALUES (?, ?, ?)";
-        try (var conn = DatabaseManager.getConnection();
-             var ps = conn.prepareStatement(sql)) {
-            ps.setString(1, user.username());
-            ps.setString(2, hashedPassword);
-            ps.setString(3, user.email());
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            throw new DataAccessException("failed to create user", e);
-        }
+        UserData toInsert = new UserData(user.username(), hashPassword(user.password()), user.email());
+        executeUpdate("INSERT INTO user (username, password, email) VALUES (?, ?, ?)", toInsert.username(), toInsert.password(), toInsert.email());
     }
 
     @Override
@@ -35,16 +25,11 @@ public class MySqlUserDAO implements UserDAO {
         if (username == null) {
             return null;
         }
-
-        String sql = "SELECT username, password, email FROM user WHERE username = ?";
         try (var conn = DatabaseManager.getConnection();
-             var ps = conn.prepareStatement(sql)) {
+             var ps = conn.prepareStatement("SELECT username, password, email FROM user WHERE username = ?")) {
             ps.setString(1, username);
             try (var rs = ps.executeQuery()) {
-                if (!rs.next()) {
-                    return null;
-                }
-                return new UserData(rs.getString("username"), rs.getString("password"), rs.getString("email"));
+                return rs.next() ? userFromRow(rs) : null;
             }
         } catch (SQLException e) {
             throw new DataAccessException("failed to get user", e);
@@ -53,12 +38,27 @@ public class MySqlUserDAO implements UserDAO {
 
     @Override
     public void clear() throws DataAccessException {
-        String sql = "TRUNCATE TABLE user";
+        executeUpdate("TRUNCATE TABLE user");
+    }
+
+    private static String hashPassword(String plain) {
+        return BCrypt.hashpw(plain, BCrypt.gensalt());
+    }
+
+    private static UserData userFromRow(java.sql.ResultSet rs) throws SQLException {
+        return new UserData(rs.getString(1), rs.getString(2), rs.getString(3));
+    }
+
+    private static void executeUpdate(String sql, String... params) throws DataAccessException {
         try (var conn = DatabaseManager.getConnection();
              var ps = conn.prepareStatement(sql)) {
+            for (int i = 0; i < params.length; i++) {
+                ps.setString(i + 1, params[i]);
+            }
             ps.executeUpdate();
         } catch (SQLException e) {
-            throw new DataAccessException("failed to clear users", e);
+            String msg = sql.startsWith("TRUNCATE") ? "failed to clear users" : "failed to create user";
+            throw new DataAccessException(msg, e);
         }
     }
 }
