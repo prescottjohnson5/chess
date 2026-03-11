@@ -15,27 +15,15 @@ public class Server {
     public Server() {
         javalin = Javalin.create(config -> config.staticFiles.add("web"));
 
-        UserDAO userDAO;
-        GameDAO gameDAO;
-        AuthDAO authDAO;
-        try {
-            userDAO = new MySqlUserDAO();
-            gameDAO = new MySqlGameDAO();
-            authDAO = new MySqlAuthDAO();
-        } catch (DataAccessException e) {
-            throw new RuntimeException("Unable to initialize database", e);
-        }
+        DataAccessLayer data = initDataAccess();
 
-        // Services
-        UserService userService = new UserService(userDAO, authDAO);
-        GameService gameService = new GameService(gameDAO, authDAO);
+        UserService userService = new UserService(data.userDAO(), data.authDAO());
+        GameService gameService = new GameService(data.gameDAO(), data.authDAO());
 
-        // Handlers
         UserHandler userHandler = new UserHandler(userService);
         GameHandler gameHandler = new GameHandler(gameService);
         ClearHandler clearHandler = new ClearHandler(userService, gameService);
 
-        // Routes
         javalin.delete("/db", clearHandler::clear);
 
         javalin.post("/user", userHandler::register);
@@ -55,6 +43,21 @@ public class Server {
 
     public void stop() {
         javalin.stop();
+    }
+
+    private static DataAccessLayer initDataAccess() {
+        try {
+            return new DataAccessLayer(
+                    new MySqlUserDAO(),
+                    new MySqlGameDAO(),
+                    new MySqlAuthDAO()
+            );
+        } catch (DataAccessException e) {
+            throw new RuntimeException("Unable to initialize database", e);
+        }
+    }
+
+    private record DataAccessLayer(UserDAO userDAO, GameDAO gameDAO, AuthDAO authDAO) {
     }
 }
 
