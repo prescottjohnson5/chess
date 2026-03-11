@@ -5,21 +5,7 @@ import org.junit.jupiter.api.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class MySqlUserDAOTests {
-
-    private MySqlUserDAO userDAO;
-    private MySqlAuthDAO authDAO;
-    private MySqlGameDAO gameDAO;
-
-    @BeforeEach
-    void setUp() throws DataAccessException {
-        userDAO = new MySqlUserDAO();
-        authDAO = new MySqlAuthDAO();
-        gameDAO = new MySqlGameDAO();
-        authDAO.clear();
-        gameDAO.clear();
-        userDAO.clear();
-    }
+class MySqlUserDAOTests extends MySqlDAOTestBase {
 
     @Test
     @DisplayName("Create user success")

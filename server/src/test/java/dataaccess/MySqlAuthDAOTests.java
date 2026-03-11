@@ -1,27 +1,15 @@
 package dataaccess;
 
 import model.AuthData;
-import model.UserData;
 import org.junit.jupiter.api.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class MySqlAuthDAOTests {
-
-    private MySqlUserDAO userDAO;
-    private MySqlAuthDAO authDAO;
-    private MySqlGameDAO gameDAO;
+class MySqlAuthDAOTests extends MySqlDAOTestBase {
 
     @BeforeEach
-    void setUp() throws DataAccessException {
-        userDAO = new MySqlUserDAO();
-        authDAO = new MySqlAuthDAO();
-        gameDAO = new MySqlGameDAO();
-        authDAO.clear();
-        gameDAO.clear();
-        userDAO.clear();
-
-        userDAO.createUser(new UserData("alice", "pw", "a@test.com"));
+    void setUpAuth() throws DataAccessException {
+        createAliceUser();
     }
 
     @Test

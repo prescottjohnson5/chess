@@ -21,8 +21,9 @@ public class MySqlGameDAO implements GameDAO {
         if (game == null) {
             throw new DataAccessException("game cannot be null");
         }
+        String insertSql = "INSERT INTO game (whiteUsername, blackUsername, gameName, game) VALUES (?, ?, ?, ?)";
         try (var conn = DatabaseManager.getConnection();
-             var ps = conn.prepareStatement("INSERT INTO game (whiteUsername, blackUsername, gameName, game) VALUES (?, ?, ?, ?)", java.sql.Statement.RETURN_GENERATED_KEYS)) {
+             var ps = conn.prepareStatement(insertSql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
             bindGameRow(ps, game.whiteUsername(), game.blackUsername(), game.gameName(), gson.toJson(game.game()));
             ps.executeUpdate();
             try (var keys = ps.getGeneratedKeys()) {

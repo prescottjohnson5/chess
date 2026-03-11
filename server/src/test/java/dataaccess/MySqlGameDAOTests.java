@@ -2,27 +2,15 @@ package dataaccess;
 
 import chess.ChessGame;
 import model.GameData;
-import model.UserData;
 import org.junit.jupiter.api.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class MySqlGameDAOTests {
-
-    private MySqlUserDAO userDAO;
-    private MySqlAuthDAO authDAO;
-    private MySqlGameDAO gameDAO;
+class MySqlGameDAOTests extends MySqlDAOTestBase {
 
     @BeforeEach
-    void setUp() throws DataAccessException {
-        userDAO = new MySqlUserDAO();
-        authDAO = new MySqlAuthDAO();
-        gameDAO = new MySqlGameDAO();
-        authDAO.clear();
-        gameDAO.clear();
-        userDAO.clear();
-
-        userDAO.createUser(new UserData("alice", "pw", "a@test.com"));
+    void setUpGame() throws DataAccessException {
+        createAliceUser();
     }
 
     @Test
