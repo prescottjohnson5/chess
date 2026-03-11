@@ -5,6 +5,7 @@ import dataaccess.DataAccessException;
 import dataaccess.UserDAO;
 import model.AuthData;
 import model.UserData;
+import org.mindrot.jbcrypt.BCrypt;
 import service.exceptions.AlreadyTakenException;
 import service.exceptions.BadRequestException;
 import service.exceptions.UnauthorizedException;
@@ -45,7 +46,7 @@ public class UserService {
             throw new BadRequestException("bad request");
         }
         UserData user = userDAO.getUser(request.username());
-        if (user == null || !user.password().equals(request.password())) {
+        if (user == null || !passwordMatches(request.password(), user.password())) {
             throw new UnauthorizedException("unauthorized");
         }
 
@@ -81,5 +82,16 @@ public class UserService {
         return request != null
                 && request.username() != null && !request.username().isEmpty()
                 && request.password() != null && !request.password().isEmpty();
+    }
+
+    private static boolean passwordMatches(String providedClearTextPassword, String storedPassword) {
+        if (storedPassword == null) {
+            return false;
+        }
+        boolean looksLikeBcrypt = storedPassword.startsWith("$2a$") || storedPassword.startsWith("$2b$") || storedPassword.startsWith("$2y$");
+        if (looksLikeBcrypt) {
+            return BCrypt.checkpw(providedClearTextPassword, storedPassword);
+        }
+        return storedPassword.equals(providedClearTextPassword);
     }
 }
