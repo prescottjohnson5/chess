@@ -15,16 +15,7 @@ public class MySqlAuthDAO implements AuthDAO {
         if (auth == null) {
             throw new DataAccessException("auth cannot be null");
         }
-
-        String sql = "INSERT INTO auth (authToken, username) VALUES (?, ?)";
-        try (var conn = DatabaseManager.getConnection();
-             var ps = conn.prepareStatement(sql)) {
-            ps.setString(1, auth.authToken());
-            ps.setString(2, auth.username());
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            throw new DataAccessException("failed to create auth", e);
-        }
+        runUpdate("INSERT INTO auth (authToken, username) VALUES (?, ?)", auth.authToken(), auth.username());
     }
 
     @Override
@@ -32,16 +23,11 @@ public class MySqlAuthDAO implements AuthDAO {
         if (authToken == null) {
             return null;
         }
-
-        String sql = "SELECT authToken, username FROM auth WHERE authToken = ?";
         try (var conn = DatabaseManager.getConnection();
-             var ps = conn.prepareStatement(sql)) {
+             var ps = conn.prepareStatement("SELECT authToken, username FROM auth WHERE authToken = ?")) {
             ps.setString(1, authToken);
             try (var rs = ps.executeQuery()) {
-                if (!rs.next()) {
-                    return null;
-                }
-                return new AuthData(rs.getString("authToken"), rs.getString("username"));
+                return rs.next() ? new AuthData(rs.getString(1), rs.getString(2)) : null;
             }
         } catch (SQLException e) {
             throw new DataAccessException("failed to get auth", e);
@@ -50,24 +36,23 @@ public class MySqlAuthDAO implements AuthDAO {
 
     @Override
     public void deleteAuth(String authToken) throws DataAccessException {
-        String sql = "DELETE FROM auth WHERE authToken = ?";
-        try (var conn = DatabaseManager.getConnection();
-             var ps = conn.prepareStatement(sql)) {
-            ps.setString(1, authToken);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            throw new DataAccessException("failed to delete auth", e);
-        }
+        runUpdate("DELETE FROM auth WHERE authToken = ?", authToken);
     }
 
     @Override
     public void clear() throws DataAccessException {
-        String sql = "TRUNCATE TABLE auth";
+        runUpdate("TRUNCATE TABLE auth");
+    }
+
+    private static void runUpdate(String sql, String... args) throws DataAccessException {
         try (var conn = DatabaseManager.getConnection();
              var ps = conn.prepareStatement(sql)) {
+            for (int i = 0; i < args.length; i++) {
+                ps.setString(i + 1, args[i]);
+            }
             ps.executeUpdate();
         } catch (SQLException e) {
-            throw new DataAccessException("failed to clear auth", e);
+            throw new DataAccessException("failed to update auth", e);
         }
     }
 }
