@@ -36,6 +36,12 @@ class MySqlUserDAOTests {
     }
 
     @Test
+    @DisplayName("Create user null fails")
+    void createUserNullFails() {
+        assertThrows(DataAccessException.class, () -> userDAO.createUser(null));
+    }
+
+    @Test
     @DisplayName("Create user duplicate fails")
     void createUserDuplicateFails() throws DataAccessException {
         UserData user = new UserData("alice", "password", "a@test.com");
@@ -55,7 +61,14 @@ class MySqlUserDAOTests {
     @Test
     @DisplayName("Get user missing returns null")
     void getUserMissingReturnsNull() throws DataAccessException {
-        assertNull(userDAO.getUser("missing"));
+        UserData result = userDAO.getUser("missing");
+        assertNull(result);
+    }
+
+    @Test
+    @DisplayName("Get user null username returns null")
+    void getUserNullReturnsNull() throws DataAccessException {
+        assertNull(userDAO.getUser(null));
     }
 
     @Test
@@ -64,6 +77,15 @@ class MySqlUserDAOTests {
         userDAO.createUser(new UserData("c", "pw", "c@test.com"));
         userDAO.clear();
         assertNull(userDAO.getUser("c"));
+    }
+
+    @Test
+    @DisplayName("Clear when empty does not throw")
+    void clearWhenEmptySucceeds() throws DataAccessException {
+        userDAO.clear();
+        assertDoesNotThrow(() -> userDAO.clear());
+        userDAO.createUser(new UserData("after", "pw", "e@test.com"));
+        assertNotNull(userDAO.getUser("after"));
     }
 }
 
