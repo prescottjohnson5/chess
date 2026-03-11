@@ -15,10 +15,16 @@ public class Server {
     public Server() {
         javalin = Javalin.create(config -> config.staticFiles.add("web"));
 
-        // DataAccess
-        UserDAO userDAO = new MemoryUserDAO();
-        GameDAO gameDAO = new MemoryGameDAO();
-        AuthDAO authDAO = new MemoryAuthDAO();
+        UserDAO userDAO;
+        GameDAO gameDAO;
+        AuthDAO authDAO;
+        try {
+            userDAO = new MySqlUserDAO();
+            gameDAO = new MySqlGameDAO();
+            authDAO = new MySqlAuthDAO();
+        } catch (DataAccessException e) {
+            throw new RuntimeException("Unable to initialize database", e);
+        }
 
         // Services
         UserService userService = new UserService(userDAO, authDAO);
