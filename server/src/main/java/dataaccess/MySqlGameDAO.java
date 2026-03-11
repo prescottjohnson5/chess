@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 public class MySqlGameDAO implements GameDAO {
-    private static final String COL_GAME_JSON = "game";
     private final Gson gson = new Gson();
 
     public MySqlGameDAO() throws DataAccessException {
@@ -22,18 +21,10 @@ public class MySqlGameDAO implements GameDAO {
         if (game == null) {
             throw new DataAccessException("game cannot be null");
         }
-
-        String gameJson = serializeGame(game.game());
-        String sql = "INSERT INTO game (whiteUsername, blackUsername, gameName, game) VALUES (?, ?, ?, ?)";
-
         try (var conn = DatabaseManager.getConnection();
-             var ps = conn.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
-            ps.setString(1, game.whiteUsername());
-            ps.setString(2, game.blackUsername());
-            ps.setString(3, game.gameName());
-            ps.setString(4, gameJson);
+             var ps = conn.prepareStatement("INSERT INTO game (whiteUsername, blackUsername, gameName, game) VALUES (?, ?, ?, ?)", java.sql.Statement.RETURN_GENERATED_KEYS)) {
+            bindGameRow(ps, game.whiteUsername(), game.blackUsername(), game.gameName(), gson.toJson(game.game()));
             ps.executeUpdate();
-
             try (var keys = ps.getGeneratedKeys()) {
                 if (keys.next()) {
                     return keys.getInt(1);
@@ -47,15 +38,14 @@ public class MySqlGameDAO implements GameDAO {
 
     @Override
     public GameData getGame(int gameID) throws DataAccessException {
-        String sql = "SELECT gameID, whiteUsername, blackUsername, gameName, game FROM game WHERE gameID = ?";
         try (var conn = DatabaseManager.getConnection();
-             var ps = conn.prepareStatement(sql)) {
+             var ps = conn.prepareStatement("SELECT gameID, whiteUsername, blackUsername, gameName, game FROM game WHERE gameID = ?")) {
             ps.setInt(1, gameID);
             try (var rs = ps.executeQuery()) {
                 if (!rs.next()) {
                     return null;
                 }
-                return rowToGameData(rs);
+                return toGameData(rs);
             }
         } catch (SQLException e) {
             throw new DataAccessException("failed to get game", e);
@@ -64,15 +54,14 @@ public class MySqlGameDAO implements GameDAO {
 
     @Override
     public Collection<GameData> getAllGames() throws DataAccessException {
-        String sql = "SELECT gameID, whiteUsername, blackUsername, gameName, game FROM game";
-        Collection<GameData> games = new ArrayList<>();
+        Collection<GameData> out = new ArrayList<>();
         try (var conn = DatabaseManager.getConnection();
-             var ps = conn.prepareStatement(sql);
+             var ps = conn.prepareStatement("SELECT gameID, whiteUsername, blackUsername, gameName, game FROM game");
              var rs = ps.executeQuery()) {
             while (rs.next()) {
-                games.add(rowToGameData(rs));
+                out.add(toGameData(rs));
             }
-            return games;
+            return out;
         } catch (SQLException e) {
             throw new DataAccessException("failed to list games", e);
         }
@@ -83,19 +72,11 @@ public class MySqlGameDAO implements GameDAO {
         if (game == null) {
             throw new DataAccessException("game cannot be null");
         }
-
-        String gameJson = serializeGame(game.game());
-        String sql = "UPDATE game SET whiteUsername = ?, blackUsername = ?, gameName = ?, game = ? WHERE gameID = ?";
-
         try (var conn = DatabaseManager.getConnection();
-             var ps = conn.prepareStatement(sql)) {
-            ps.setString(1, game.whiteUsername());
-            ps.setString(2, game.blackUsername());
-            ps.setString(3, game.gameName());
-            ps.setString(4, gameJson);
+             var ps = conn.prepareStatement("UPDATE game SET whiteUsername = ?, blackUsername = ?, gameName = ?, game = ? WHERE gameID = ?")) {
+            bindGameRow(ps, game.whiteUsername(), game.blackUsername(), game.gameName(), gson.toJson(game.game()));
             ps.setInt(5, game.gameID());
-            int rowsUpdated = ps.executeUpdate();
-            if (rowsUpdated == 0) {
+            if (ps.executeUpdate() == 0) {
                 throw new DataAccessException("game does not exist");
             }
         } catch (SQLException e) {
@@ -103,31 +84,31 @@ public class MySqlGameDAO implements GameDAO {
         }
     }
 
-    private GameData rowToGameData(ResultSet rs) throws SQLException {
-        String gameJson = rs.getString(COL_GAME_JSON);
-        ChessGame chessGame = gson.fromJson(gameJson, ChessGame.class);
-        return new GameData(
-                rs.getInt("gameID"),
-                rs.getString("whiteUsername"),
-                rs.getString("blackUsername"),
-                rs.getString("gameName"),
-                chessGame
-        );
-    }
-
-    private String serializeGame(ChessGame chessGame) {
-        return gson.toJson(chessGame);
-    }
-
     @Override
     public void clear() throws DataAccessException {
-        String sql = "TRUNCATE TABLE game";
         try (var conn = DatabaseManager.getConnection();
-             var ps = conn.prepareStatement(sql)) {
+             var ps = conn.prepareStatement("TRUNCATE TABLE game")) {
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new DataAccessException("failed to clear games", e);
         }
+    }
+
+    private static void bindGameRow(java.sql.PreparedStatement ps, String white, String black, String name, String gameJson) throws SQLException {
+        ps.setString(1, white);
+        ps.setString(2, black);
+        ps.setString(3, name);
+        ps.setString(4, gameJson);
+    }
+
+    private GameData toGameData(ResultSet rs) throws SQLException {
+        return new GameData(
+                rs.getInt(1),
+                rs.getString(2),
+                rs.getString(3),
+                rs.getString(4),
+                gson.fromJson(rs.getString(5), ChessGame.class)
+        );
     }
 }
 
