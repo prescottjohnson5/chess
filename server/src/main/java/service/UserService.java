@@ -88,10 +88,17 @@ public class UserService {
         if (storedPassword == null) {
             return false;
         }
-        boolean looksLikeBcrypt = storedPassword.startsWith("$2a$") || storedPassword.startsWith("$2b$") || storedPassword.startsWith("$2y$");
-        if (looksLikeBcrypt) {
+        if (isBcryptHash(storedPassword)) {
             return BCrypt.checkpw(providedClearTextPassword, storedPassword);
         }
         return storedPassword.equals(providedClearTextPassword);
+    }
+
+    private static boolean isBcryptHash(String s) {
+        if (s == null || s.length() < 4) {
+            return false;
+        }
+        String prefix = s.substring(0, 4);
+        return prefix.equals("$2a$") || prefix.equals("$2b$") || prefix.equals("$2y$");
     }
 }
