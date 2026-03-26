@@ -41,17 +41,26 @@ public class ServerFacadeTests {
 
     @BeforeEach
     void clearDatabase() {
+        clearDb();
+    }
+
+    private void clearDb() {
         HttpClient http = HttpClient.newHttpClient();
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create(dbUrl()))
                     .DELETE()
                     .header("Content-Type", "application/json")
                     .build();
-            HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response =
+                    http.send(request, HttpResponse.BodyHandlers.ofString());
             Assertions.assertEquals(200, response.statusCode(), "Failed to clear database");
         } catch (Exception e) {
             throw new RuntimeException("Failed to clear database for test", e);
         }
+    }
+
+    private AuthData register(String username, String password, String email) {
+        return facade.register(username, password, email);
     }
 
     @Test
@@ -65,14 +74,14 @@ public class ServerFacadeTests {
 
     @Test
     void registerDuplicateFails() {
-        facade.register("alice", "password", "a@test.com");
+        register("alice", "password", "a@test.com");
         Assertions.assertThrows(ServerFacadeException.class,
-                () -> facade.register("alice", "password2", "a2@test.com"));
+                () -> register("alice", "password2", "a2@test.com"));
     }
 
     @Test
     void loginSuccess() {
-        facade.register("bob", "pw", "b@test.com");
+        register("bob", "pw", "b@test.com");
         AuthData auth = facade.login("bob", "pw");
         Assertions.assertNotNull(auth);
         Assertions.assertEquals("bob", auth.username());
@@ -87,13 +96,13 @@ public class ServerFacadeTests {
 
     @Test
     void logoutSuccess() {
-        AuthData auth = facade.register("c", "pw", "c@test.com");
+        AuthData auth = register("c", "pw", "c@test.com");
         Assertions.assertDoesNotThrow(() -> facade.logout(auth.authToken()));
     }
 
     @Test
     void logoutTwiceFails() {
-        AuthData auth = facade.register("d", "pw", "d@test.com");
+        AuthData auth = register("d", "pw", "d@test.com");
         facade.logout(auth.authToken());
         Assertions.assertThrows(ServerFacadeException.class,
                 () -> facade.logout(auth.authToken()));
@@ -101,7 +110,7 @@ public class ServerFacadeTests {
 
     @Test
     void listGamesSuccessInitiallyEmpty() {
-        AuthData auth = facade.register("e", "pw", "e@test.com");
+        AuthData auth = register("e", "pw", "e@test.com");
         GameData[] games = facade.listGames(auth.authToken());
         Assertions.assertNotNull(games);
         Assertions.assertEquals(0, games.length);
@@ -115,21 +124,21 @@ public class ServerFacadeTests {
 
     @Test
     void createGameSuccess() {
-        AuthData auth = facade.register("f", "pw", "f@test.com");
+        AuthData auth = register("f", "pw", "f@test.com");
         int gameID = facade.createGame(auth.authToken(), "mygame");
         Assertions.assertTrue(gameID > 0);
     }
 
     @Test
     void createGameBadRequestFails() {
-        AuthData auth = facade.register("g", "pw", "g@test.com");
+        AuthData auth = register("g", "pw", "g@test.com");
         Assertions.assertThrows(ServerFacadeException.class,
                 () -> facade.createGame(auth.authToken(), null));
     }
 
     @Test
     void joinGameSuccessUpdatesList() {
-        AuthData auth = facade.register("h", "pw", "h@test.com");
+        AuthData auth = register("h", "pw", "h@test.com");
         int gameID = facade.createGame(auth.authToken(), "join-me");
 
         Assertions.assertDoesNotThrow(() ->
@@ -144,7 +153,7 @@ public class ServerFacadeTests {
 
     @Test
     void joinGameMissingGameFails() {
-        AuthData auth = facade.register("i", "pw", "i@test.com");
+        AuthData auth = register("i", "pw", "i@test.com");
         Assertions.assertThrows(ServerFacadeException.class,
                 () -> facade.joinGame(auth.authToken(), ChessGame.TeamColor.WHITE, 123456));
     }
