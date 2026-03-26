@@ -27,46 +27,40 @@ public final class BoardRenderer {
             return;
         }
 
-        int[] colOrder = perspective == ChessGame.TeamColor.WHITE
-                ? new int[]{1, 2, 3, 4, 5, 6, 7, 8}
-                : new int[]{8, 7, 6, 5, 4, 3, 2, 1};
-
-        int[] rowOrder = perspective == ChessGame.TeamColor.WHITE
-                ? new int[]{8, 7, 6, 5, 4, 3, 2, 1}
-                : new int[]{1, 2, 3, 4, 5, 6, 7, 8};
-
-        char[] letters = new char[]{'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'};
-        char[] lettersToPrint = perspective == ChessGame.TeamColor.WHITE
-                ? letters
-                : new char[]{'H', 'G', 'F', 'E', 'D', 'C', 'B', 'A'};
-
         System.out.print("   ");
-        for (char letter : lettersToPrint) {
+        for (int colIndex = 0; colIndex < 8; colIndex++) {
+            char letter;
+            if (perspective == ChessGame.TeamColor.WHITE) {
+                letter = (char) ('A' + colIndex);
+            } else {
+                letter = (char) ('A' + (7 - colIndex));
+            }
             System.out.print(" " + letter + " ");
         }
         System.out.println();
 
-        for (int displayRow : rowOrder) {
-            System.out.print(displayRow + " ");
-            for (int displayCol : colOrder) {
-                ChessPosition pos = new ChessPosition(displayRow, displayCol);
+        for (int rowIndex = 0; rowIndex < 8; rowIndex++) {
+            int row = perspective == ChessGame.TeamColor.WHITE ? (8 - rowIndex) : (1 + rowIndex);
+            System.out.print(row + " ");
+
+            for (int colIndex = 0; colIndex < 8; colIndex++) {
+                int col = perspective == ChessGame.TeamColor.WHITE ? (1 + colIndex) : (8 - colIndex);
+                ChessPosition pos = new ChessPosition(row, col);
                 ChessPiece piece = board.getPiece(pos);
 
-                boolean lightSquare = isLightSquare(displayRow, displayCol);
+                boolean lightSquare = isLightSquare(row, col);
                 String bg = lightSquare
                         ? EscapeSequences.SET_BG_COLOR_LIGHT_GREY
                         : EscapeSequences.SET_BG_COLOR_DARK_GREY;
 
-                String textColor;
                 if (piece == null) {
-                    textColor = EscapeSequences.RESET_TEXT_COLOR;
-                    System.out.print(bg + textColor + EscapeSequences.EMPTY + EscapeSequences.RESET_BG_COLOR);
+                    System.out.print(bg + EscapeSequences.RESET_TEXT_COLOR + EscapeSequences.EMPTY + EscapeSequences.RESET_BG_COLOR);
                 } else if (piece.getTeamColor() == ChessGame.TeamColor.WHITE) {
-                    textColor = EscapeSequences.SET_TEXT_COLOR_RED;
-                    System.out.print(bg + textColor + renderPiece(piece) + EscapeSequences.RESET_BG_COLOR + EscapeSequences.RESET_TEXT_COLOR);
+                    System.out.print(bg + EscapeSequences.SET_TEXT_COLOR_RED + renderPiece(piece)
+                            + EscapeSequences.RESET_BG_COLOR + EscapeSequences.RESET_TEXT_COLOR);
                 } else {
-                    textColor = EscapeSequences.SET_TEXT_COLOR_BLUE;
-                    System.out.print(bg + textColor + renderPiece(piece) + EscapeSequences.RESET_BG_COLOR + EscapeSequences.RESET_TEXT_COLOR);
+                    System.out.print(bg + EscapeSequences.SET_TEXT_COLOR_BLUE + renderPiece(piece)
+                            + EscapeSequences.RESET_BG_COLOR + EscapeSequences.RESET_TEXT_COLOR);
                 }
             }
             System.out.println();
