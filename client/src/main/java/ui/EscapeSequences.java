@@ -7,6 +7,9 @@ public class EscapeSequences {
 
     private static final String UNICODE_ESCAPE = "\u001b";
 
+    private EscapeSequences() {
+    }
+
     public static final String ERASE_SCREEN = UNICODE_ESCAPE + "[H" + UNICODE_ESCAPE + "[2J";
     public static final String ERASE_LINE = UNICODE_ESCAPE + "[2K";
 

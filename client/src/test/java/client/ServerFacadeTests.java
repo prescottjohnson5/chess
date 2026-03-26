@@ -23,6 +23,10 @@ public class ServerFacadeTests {
     private static final String HOST = "localhost";
     private static int port;
 
+    private static String dbUrl() {
+        return "http://" + HOST + ":" + port + "/db";
+    }
+
     @BeforeAll
     public static void init() {
         server = new Server();
@@ -39,14 +43,12 @@ public class ServerFacadeTests {
     void clearDatabase() {
         HttpClient http = HttpClient.newHttpClient();
         try {
-            HttpRequest request = HttpRequest.newBuilder(
-                            URI.create("http://" + HOST + ":" + port + "/db"))
+            HttpRequest request = HttpRequest.newBuilder(URI.create(dbUrl()))
                     .DELETE()
                     .header("Content-Type", "application/json")
                     .build();
-            HttpResponse<String> response =
-                    http.send(request, HttpResponse.BodyHandlers.ofString());
-            Assertions.assertEquals(200, response.statusCode());
+            HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+            Assertions.assertEquals(200, response.statusCode(), "Failed to clear database");
         } catch (Exception e) {
             throw new RuntimeException("Failed to clear database for test", e);
         }

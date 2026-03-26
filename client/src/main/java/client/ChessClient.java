@@ -87,9 +87,10 @@ public class ChessClient {
             } else if (command.equals("help")) {
                 printPostloginHelp();
             } else if (command.equals("logout")) {
-                attemptLogout();
-                auth = null;
-                return;
+                if (attemptLogout()) {
+                    auth = null;
+                    return;
+                }
             } else if (command.equals("create")) {
                 createGameUi();
             } else if (command.equals("list")) {
@@ -189,12 +190,14 @@ public class ChessClient {
         }
     }
 
-    private void attemptLogout() {
+    private boolean attemptLogout() {
         try {
             facade.logout(auth.authToken());
             System.out.println("Logged out.");
+            return true;
         } catch (ServerFacadeException e) {
             System.out.println(e.getMessage());
+            return false;
         }
     }
 

@@ -10,6 +10,11 @@ public final class BoardRenderer {
     private BoardRenderer() {
     }
 
+    private static boolean isLightSquare(int row, int col) {
+        // Keeps chess rule: a8 and h1 should be the "lighter" color.
+        return (row + col) % 2 != 0;
+    }
+
     public static void drawInitialBoard(ChessGame game, ChessGame.TeamColor perspective) {
         if (game == null || perspective == null) {
             return;
@@ -47,7 +52,7 @@ public final class BoardRenderer {
                 ChessPosition pos = new ChessPosition(displayRow, displayCol);
                 ChessPiece piece = board.getPiece(pos);
 
-                boolean lightSquare = (displayRow + displayCol) % 2 != 0;
+                boolean lightSquare = isLightSquare(displayRow, displayCol);
                 String bg = lightSquare
                         ? EscapeSequences.SET_BG_COLOR_LIGHT_GREY
                         : EscapeSequences.SET_BG_COLOR_DARK_GREY;
