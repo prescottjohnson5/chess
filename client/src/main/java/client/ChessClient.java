@@ -37,32 +37,32 @@ public class ChessClient {
                 continue;
             }
 
-            if (command.equals("quit")) {
+            if (isExitCommand(command)) {
                 System.out.println("Goodbye.");
                 return;
-            } else if (command.equals("exit")) {
-                System.out.println("Goodbye.");
-                return;
-            } else if (command.equals("help")) {
-                printPreloginHelp();
-            } else if (command.equals("login")) {
-                auth = attemptLogin();
-                if (auth != null) {
-                    postloginUi();
+            }
+
+            switch (command) {
+                case "help" -> printPreloginHelp();
+                case "login" -> {
+                    auth = attemptLogin();
                     if (auth != null) {
-                        return;
+                        postloginUi();
+                        if (auth != null) {
+                            return;
+                        }
                     }
                 }
-            } else if (command.equals("register")) {
-                auth = attemptRegister();
-                if (auth != null) {
-                    postloginUi();
+                case "register" -> {
+                    auth = attemptRegister();
                     if (auth != null) {
-                        return;
+                        postloginUi();
+                        if (auth != null) {
+                            return;
+                        }
                     }
                 }
-            } else {
-                System.out.println("Unknown command. Type `help` for options.");
+                default -> System.out.println("Unknown command. Type `help` for options.");
             }
         }
     }
@@ -78,29 +78,24 @@ public class ChessClient {
                 continue;
             }
 
-            if (command.equals("quit")) {
+            if (isExitCommand(command)) {
                 System.out.println("Goodbye.");
                 return;
-            } else if (command.equals("exit")) {
-                System.out.println("Goodbye.");
-                return;
-            } else if (command.equals("help")) {
-                printPostloginHelp();
-            } else if (command.equals("logout")) {
-                if (attemptLogout()) {
-                    auth = null;
-                    return;
+            }
+
+            switch (command) {
+                case "help" -> printPostloginHelp();
+                case "logout" -> {
+                    if (attemptLogout()) {
+                        auth = null;
+                        return;
+                    }
                 }
-            } else if (command.equals("create")) {
-                createGameUi();
-            } else if (command.equals("list")) {
-                listGamesUi();
-            } else if (command.equals("play")) {
-                playGameUi();
-            } else if (command.equals("observe")) {
-                observeGameUi();
-            } else {
-                System.out.println("Unknown command. Type `help` for options.");
+                case "create" -> createGameUi();
+                case "list" -> listGamesUi();
+                case "play" -> playGameUi();
+                case "observe" -> observeGameUi();
+                default -> System.out.println("Unknown command. Type `help` for options.");
             }
         }
     }
@@ -124,6 +119,10 @@ public class ChessClient {
         System.out.println("  observe              Observe a game (no moves yet)");
         System.out.println("  quit                 Exit the client");
         System.out.println("  exit                 Exit the client");
+    }
+
+    private boolean isExitCommand(String command) {
+        return command != null && (command.equals("quit") || command.equals("exit"));
     }
 
     private String readCommand() {
