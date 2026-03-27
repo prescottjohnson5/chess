@@ -62,7 +62,7 @@ public class ChessClient {
                         }
                     }
                 }
-                default -> System.out.println("Unknown command. Type `help` for options.");
+                default -> System.out.println("Unknown command! Type `help` for commands");
             }
         }
     }
@@ -95,7 +95,7 @@ public class ChessClient {
                 case "list" -> listGamesUi();
                 case "play" -> playGameUi();
                 case "observe" -> observeGameUi();
-                default -> System.out.println("Unknown command. Type `help` for options.");
+                default -> System.out.println("Unknown command! Type `help` for commands");
             }
         }
     }

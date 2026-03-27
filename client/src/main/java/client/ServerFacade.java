@@ -53,7 +53,7 @@ public class ServerFacade {
         }
         return parsed.gameID();
     }
-
+ 
     public void joinGame(String authToken, ChessGame.TeamColor playerColor, int gameID) {
         JoinGameBody body = new JoinGameBody(playerColor, gameID);
         exchangeNoBody("PUT", "/game", body, authToken);
