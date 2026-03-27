@@ -44,8 +44,10 @@ public class EscapeSequences {
 
     public static final String SET_BG_COLOR_BLACK = bg(0);
     public static final String SET_BG_COLOR_LIGHT_GREY = bg(242);
-    /** Very light square (faint off-white) for the chess board light squares. */
-    public static final String SET_BG_COLOR_OFF_WHITE = bg(254);
+    /** Chess board light squares (pastel blue). */
+    public static final String SET_BG_COLOR_LIGHT_BLUE = bg(195);
+    /** Chess board dark squares (deep blue). */
+    public static final String SET_BG_COLOR_DARK_BLUE = bg(24);
     public static final String SET_BG_COLOR_DARK_GREY = bg(235);
     public static final String SET_BG_COLOR_RED = bg(160);
     public static final String SET_BG_COLOR_GREEN = bg(46);

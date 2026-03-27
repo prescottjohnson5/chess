@@ -50,8 +50,8 @@ public final class BoardRenderer {
 
                 boolean lightSquare = isLightSquare(row, col);
                 String bg = lightSquare
-                        ? EscapeSequences.SET_BG_COLOR_OFF_WHITE
-                        : EscapeSequences.SET_BG_COLOR_DARK_GREY;
+                        ? EscapeSequences.SET_BG_COLOR_LIGHT_BLUE
+                        : EscapeSequences.SET_BG_COLOR_DARK_BLUE;
 
                 if (piece == null) {
                     System.out.print(bg + EscapeSequences.RESET_TEXT_COLOR + EscapeSequences.EMPTY + EscapeSequences.RESET_BG_COLOR);
