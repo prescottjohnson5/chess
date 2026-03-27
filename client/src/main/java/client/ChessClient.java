@@ -79,7 +79,7 @@ public class ChessClient {
             }
 
             if (isExitCommand(command)) {
-                System.out.println("Goodbye.");
+                System.out.println("Thank you for playing!");
                 return;
             }
 
@@ -102,7 +102,7 @@ public class ChessClient {
 
     private void printPreloginHelp() {
         System.out.println("Prelogin commands: ");
-        System.out.println("  help                 Show commands");
+        System.out.println("  help                 Shows all commands");
         System.out.println("  login                Log in to an existing account");
         System.out.println("  register             Register a new account");
         System.out.println("  quit                 Exit the client");
@@ -115,8 +115,8 @@ public class ChessClient {
         System.out.println("  logout               Log out");
         System.out.println("  create               Create a new game");
         System.out.println("  list                 List existing games");
-        System.out.println("  play                 Join a game and play (no moves yet)");
-        System.out.println("  observe              Observe a game (no moves yet)");
+        System.out.println("  play                 Join an exisiting game");
+        System.out.println("  observe              Observe an existing game");
         System.out.println("  quit                 Exit the client");
         System.out.println("  exit                 Exit the client");
     }
@@ -254,7 +254,7 @@ public class ChessClient {
 
         try {
             facade.joinGame(auth.authToken(), team, selected.gameID());
-            System.out.println("Joined the game. Drawing board...");
+            System.out.println("Joined game successfully!");
             BoardRenderer.drawInitialBoard(selected.game(), team);
         } catch (ServerFacadeException e) {
             System.out.println(e.getMessage());
@@ -271,7 +271,7 @@ public class ChessClient {
             return;
         }
         GameData selected = lastListedGames[gameIndex - 1];
-        System.out.println("Observing the game. Drawing board...");
+        System.out.println("Joined game successfully!");
         BoardRenderer.drawInitialBoard(selected.game(), ChessGame.TeamColor.WHITE);
     }
 
