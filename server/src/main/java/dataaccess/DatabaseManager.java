@@ -1,5 +1,6 @@
 package dataaccess;
 
+import java.io.InputStream;
 import java.sql.*;
 import java.util.Properties;
 
@@ -53,17 +54,46 @@ public class DatabaseManager {
     }
 
     private static void loadPropertiesFromResources() {
-        // Package-relative path (dataaccess/db.properties), not classpath-root /db.properties:
-        // another JAR on the test classpath can also ship db.properties at the root and win first.
-        try (var propStream = DatabaseManager.class.getResourceAsStream("db.properties")) {
-            if (propStream == null) {
+        try {
+            Properties props = new Properties();
+            // 1) dataaccess/db.properties — local / committed defaults
+            loadIfPresent(props, DatabaseManager.class.getResourceAsStream("db.properties"));
+            // 2) classpath root /db.properties — BYU autograder writes this during grading (overlays above)
+            loadIfPresent(props, DatabaseManager.class.getResourceAsStream("/db.properties"));
+            applyEnvOverrides(props);
+            if (trimOrNull(props.getProperty("db.host")) == null) {
                 throw new Exception("Unable to load db.properties");
             }
-            Properties props = new Properties();
-            props.load(propStream);
             loadProperties(props);
         } catch (Exception ex) {
             throw new RuntimeException("unable to process db.properties", ex);
+        }
+    }
+
+    private static void loadIfPresent(Properties props, InputStream stream) throws java.io.IOException {
+        if (stream != null) {
+            try (stream) {
+                props.load(stream);
+            }
+        }
+    }
+
+    /** Lets CI / autograder override JDBC settings when set. */
+    private static void applyEnvOverrides(Properties props) {
+        envOverride(props, "db.host", "CHESS_DB_HOST", "MYSQL_HOST");
+        envOverride(props, "db.port", "CHESS_DB_PORT", "MYSQL_PORT");
+        envOverride(props, "db.name", "CHESS_DB_NAME", "MYSQL_DATABASE");
+        envOverride(props, "db.user", "CHESS_DB_USER", "MYSQL_USER");
+        envOverride(props, "db.password", "CHESS_DB_PASSWORD", "MYSQL_PASSWORD");
+    }
+
+    private static void envOverride(Properties props, String key, String... envNames) {
+        for (String env : envNames) {
+            String v = System.getenv(env);
+            if (v != null) {
+                props.setProperty(key, v.trim());
+                return;
+            }
         }
     }
 
