@@ -10,4 +10,7 @@ out/
 .DS_Store
 
 ### Chess project ###
+# Ignore local db.properties copies; the canonical file for the server must be committed
+# so GitHub Actions / autograder can load JDBC settings (see dataaccess path).
 server/**/db.properties
+!server/src/main/resources/dataaccess/db.properties
