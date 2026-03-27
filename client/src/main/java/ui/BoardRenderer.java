@@ -50,16 +50,16 @@ public final class BoardRenderer {
 
                 boolean lightSquare = isLightSquare(row, col);
                 String bg = lightSquare
-                        ? EscapeSequences.SET_BG_COLOR_LIGHT_GREY
+                        ? EscapeSequences.SET_BG_COLOR_OFF_WHITE
                         : EscapeSequences.SET_BG_COLOR_DARK_GREY;
 
                 if (piece == null) {
                     System.out.print(bg + EscapeSequences.RESET_TEXT_COLOR + EscapeSequences.EMPTY + EscapeSequences.RESET_BG_COLOR);
                 } else if (piece.getTeamColor() == ChessGame.TeamColor.WHITE) {
-                    System.out.print(bg + EscapeSequences.SET_TEXT_COLOR_RED + renderPiece(piece)
+                    System.out.print(bg + EscapeSequences.SET_TEXT_COLOR_WHITE + renderPiece(piece)
                             + EscapeSequences.RESET_BG_COLOR + EscapeSequences.RESET_TEXT_COLOR);
                 } else {
-                    System.out.print(bg + EscapeSequences.SET_TEXT_COLOR_BLUE + renderPiece(piece)
+                    System.out.print(bg + EscapeSequences.SET_TEXT_COLOR_BLACK + renderPiece(piece)
                             + EscapeSequences.RESET_BG_COLOR + EscapeSequences.RESET_TEXT_COLOR);
                 }
             }
