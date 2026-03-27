@@ -53,7 +53,9 @@ public class DatabaseManager {
     }
 
     private static void loadPropertiesFromResources() {
-        try (var propStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("db.properties")) {
+        // Package-relative path (dataaccess/db.properties), not classpath-root /db.properties:
+        // another JAR on the test classpath can also ship db.properties at the root and win first.
+        try (var propStream = DatabaseManager.class.getResourceAsStream("db.properties")) {
             if (propStream == null) {
                 throw new Exception("Unable to load db.properties");
             }
@@ -66,12 +68,16 @@ public class DatabaseManager {
     }
 
     private static void loadProperties(Properties props) {
-        databaseName = props.getProperty("db.name");
-        dbUsername = props.getProperty("db.user");
-        dbPassword = props.getProperty("db.password");
+        databaseName = trimOrNull(props.getProperty("db.name"));
+        dbUsername = trimOrNull(props.getProperty("db.user"));
+        dbPassword = trimOrNull(props.getProperty("db.password"));
 
-        var host = props.getProperty("db.host");
+        var host = trimOrNull(props.getProperty("db.host"));
         var port = Integer.parseInt(props.getProperty("db.port"));
         connectionUrl = String.format("jdbc:mysql://%s:%d", host, port);
+    }
+
+    private static String trimOrNull(String s) {
+        return s == null ? null : s.trim();
     }
 }
