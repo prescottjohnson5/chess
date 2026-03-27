@@ -46,25 +46,27 @@ public class ChessClient {
                 case "help" -> printPreloginHelp();
                 case "login" -> {
                     auth = attemptLogin();
-                    if (auth != null) {
-                        postloginUi();
-                        if (auth != null) {
-                            return;
-                        }
+                    if (auth != null && postloginAndExitIfStillAuthed()) {
+                        return;
                     }
                 }
                 case "register" -> {
                     auth = attemptRegister();
-                    if (auth != null) {
-                        postloginUi();
-                        if (auth != null) {
-                            return;
-                        }
+                    if (auth != null && postloginAndExitIfStillAuthed()) {
+                        return;
                     }
                 }
                 default -> System.out.println("Unknown command! Type `help` for commands");
             }
         }
+    }
+
+    /**
+     * Runs postlogin UI; returns true if the user quit the client from postlogin while still logged in.
+     */
+    private boolean postloginAndExitIfStillAuthed() {
+        postloginUi();
+        return auth != null;
     }
 
     private void postloginUi() {
