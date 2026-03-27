@@ -55,11 +55,11 @@ public final class BoardRenderer {
 
                 if (piece == null) {
                     System.out.print(bg + EscapeSequences.RESET_TEXT_COLOR + EscapeSequences.EMPTY + EscapeSequences.RESET_BG_COLOR);
-                } else if (piece.getTeamColor() == ChessGame.TeamColor.WHITE) {
-                    System.out.print(bg + EscapeSequences.SET_TEXT_COLOR_WHITE + renderPiece(piece)
-                            + EscapeSequences.RESET_BG_COLOR + EscapeSequences.RESET_TEXT_COLOR);
                 } else {
-                    System.out.print(bg + EscapeSequences.SET_TEXT_COLOR_BLACK + renderPiece(piece)
+                    String fg = piece.getTeamColor() == ChessGame.TeamColor.WHITE
+                            ? EscapeSequences.SET_TEXT_COLOR_WHITE
+                            : EscapeSequences.SET_TEXT_COLOR_BLACK;
+                    System.out.print(bg + fg + renderPiece(piece)
                             + EscapeSequences.RESET_BG_COLOR + EscapeSequences.RESET_TEXT_COLOR);
                 }
             }
