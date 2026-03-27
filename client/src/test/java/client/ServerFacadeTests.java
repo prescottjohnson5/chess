@@ -36,7 +36,9 @@ public class ServerFacadeTests {
 
     @AfterAll
     static void stopServer() {
-        server.stop();
+        if (server != null) {
+            server.stop();
+        }
     }
 
     @BeforeEach
