@@ -2,9 +2,11 @@ package server;
 
 import dataaccess.*;
 import io.javalin.Javalin;
+import io.javalin.websocket.WsHandlerType;
 import server.handlers.ClearHandler;
 import server.handlers.GameHandler;
 import server.handlers.UserHandler;
+import server.websocket.GameWebSocketHandler;
 import service.GameService;
 import service.UserService;
 
@@ -13,8 +15,6 @@ public class Server {
     private final Javalin javalin;
 
     public Server() {
-        javalin = Javalin.create(config -> config.staticFiles.add("web"));
-
         DataAccessLayer data = initDataAccess();
 
         UserService userService = new UserService(data.userDAO(), data.authDAO());
@@ -23,6 +23,13 @@ public class Server {
         UserHandler userHandler = new UserHandler(userService);
         GameHandler gameHandler = new GameHandler(gameService);
         ClearHandler clearHandler = new ClearHandler(userService, gameService);
+        GameWebSocketHandler webSocketHandler = new GameWebSocketHandler(data.gameDAO(), data.authDAO());
+
+        javalin = Javalin.create(config -> config.staticFiles.add("web"));
+        javalin.addWsHandler(WsHandlerType.WEBSOCKET, "/ws", ws -> {
+            ws.onMessage(webSocketHandler::onMessage);
+            ws.onClose(webSocketHandler::onClose);
+        });
 
         javalin.delete("/db", clearHandler::clear);
 
