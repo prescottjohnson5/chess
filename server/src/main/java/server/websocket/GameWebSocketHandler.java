@@ -134,9 +134,18 @@ public class GameWebSocketHandler {
         broadcast(c.gameID, new ServerMessage(LOAD_GAME, null, null, updated), null);
         notifyOthers(c.gameID, c.username + " moved: " + moveStr(mv), ctx);
         TeamColor next = updated.getTeamTurn();
+        String nextName = next == TeamColor.WHITE ? row.whiteUsername() : row.blackUsername();
+        String nextLabel = nextName != null ? nextName : "player";
         if (updated.isInCheckmate(next)) {
-            String name = next == TeamColor.WHITE ? row.whiteUsername() : row.blackUsername();
-            broadcast(c.gameID, new ServerMessage(NOTIFICATION, (name != null ? name : "player") + " is in checkmate", null, null), null);
+            updated.setGameOver(true);
+            gameDAO.updateGame(new GameData(row.gameID(), row.whiteUsername(), row.blackUsername(), row.gameName(), updated));
+            broadcast(c.gameID, new ServerMessage(NOTIFICATION, nextLabel + " is in checkmate", null, null), null);
+        } else if (updated.isInStalemate(next)) {
+            updated.setGameOver(true);
+            gameDAO.updateGame(new GameData(row.gameID(), row.whiteUsername(), row.blackUsername(), row.gameName(), updated));
+            broadcast(c.gameID, new ServerMessage(NOTIFICATION, nextLabel + " is in stalemate", null, null), null);
+        } else if (updated.isInCheck(next)) {
+            broadcast(c.gameID, new ServerMessage(NOTIFICATION, nextLabel + " is in check", null, null), null);
         }
     }
 

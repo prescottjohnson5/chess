@@ -16,7 +16,10 @@ import org.glassfish.tyrus.client.ClientManager;
 import ui.BoardRenderer;
 
 import java.net.URI;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Scanner;
+import java.util.Set;
 
 public class ChessClient {
 
@@ -341,13 +344,14 @@ public class ChessClient {
     private void gameplayUi(int gameId, ChessGame.TeamColor perspective) {
         Session[] sock = { null };
         ChessGame[] board = { null };
+        HighlightState highlight = new HighlightState();
         String url = "ws://" + wsHost + ":" + wsPort + "/ws";
         try {
             ClientManager.createClient().connectToServer(new Endpoint() {
                 @Override
                 public void onOpen(Session s, EndpointConfig c) {
                     sock[0] = s;
-                    s.addMessageHandler(String.class, j -> onWsMessage(j, board, perspective));
+                    s.addMessageHandler(String.class, j -> onWsMessage(j, board, perspective, highlight));
                     wsSend(s, "CONNECT", gameId, null);
                 }
             }, ClientEndpointConfig.Builder.create().build(), URI.create(url));
@@ -371,18 +375,14 @@ public class ChessClient {
             }
             switch (p[0]) {
                 case "help" -> printGameplayHelp();
-                case "redraw" -> {
-                    if (board[0] == null) {
-                        System.out.println("No board yet.");
-                    } else {
-                        BoardRenderer.drawInitialBoard(board[0], perspective);
-                    }
-                }
+                case "redraw" -> redrawGameplay(board[0], perspective, highlight);
                 case "leave" -> {
                     wsSend(sock[0], "LEAVE", gameId, null);
                     done = true;
                 }
                 case "move" -> tryMove(sock[0], gameId, p);
+                case "highlight" -> tryHighlight(board[0], perspective, p, highlight);
+                case "resign" -> tryResign(sock[0], gameId);
                 case "quit", "exit" -> System.out.println("Use `leave` first, then `quit` from the main menu.");
                 default -> System.out.println("Unknown command. Type `help`.");
             }
@@ -391,13 +391,28 @@ public class ChessClient {
         System.out.println("Left the game.");
     }
 
-    private void onWsMessage(String json, ChessGame[] board, ChessGame.TeamColor perspective) {
+    private static final class HighlightState {
+        ChessPosition from;
+        Set<ChessPosition> to = Collections.emptySet();
+    }
+
+    private void redrawGameplay(ChessGame game, ChessGame.TeamColor perspective, HighlightState hi) {
+        if (game == null) {
+            System.out.println("No board yet.");
+            return;
+        }
+        BoardRenderer.drawBoard(game, perspective, hi.from, hi.to);
+    }
+
+    private void onWsMessage(String json, ChessGame[] board, ChessGame.TeamColor perspective, HighlightState hi) {
         try {
             JsonObject o = JsonParser.parseString(json).getAsJsonObject();
             switch (o.get("serverMessageType").getAsString()) {
                 case "LOAD_GAME" -> {
                     board[0] = gson.fromJson(o.get("game"), ChessGame.class);
-                    BoardRenderer.drawInitialBoard(board[0], perspective);
+                    hi.from = null;
+                    hi.to = Collections.emptySet();
+                    redrawGameplay(board[0], perspective, hi);
                 }
                 case "NOTIFICATION" -> System.out.println(o.get("message").getAsString());
                 case "ERROR" -> System.out.println(o.get("errorMessage").getAsString());
@@ -406,6 +421,48 @@ public class ChessClient {
             }
         } catch (RuntimeException e) {
             System.out.println("Bad server message.");
+        }
+    }
+
+    private void tryHighlight(ChessGame game, ChessGame.TeamColor perspective, String[] p, HighlightState hi) {
+        if (game == null) {
+            System.out.println("No board yet.");
+            return;
+        }
+        if (p.length != 3) {
+            System.out.println("Usage: highlight <row> <col> (1-8)");
+            return;
+        }
+        try {
+            int row = Integer.parseInt(p[1]);
+            int col = Integer.parseInt(p[2]);
+            ChessPosition at = new ChessPosition(row, col);
+            if (game.getBoard().getPiece(at) == null) {
+                System.out.println("No piece on that square.");
+                return;
+            }
+            Set<ChessPosition> ends = new HashSet<>();
+            for (ChessMove m : game.validMoves(at)) {
+                ends.add(m.getEndPosition());
+            }
+            hi.from = at;
+            hi.to = ends;
+            BoardRenderer.drawBoard(game, perspective, hi.from, hi.to);
+        } catch (NumberFormatException e) {
+            System.out.println("highlight needs two integers.");
+        }
+    }
+
+    private void tryResign(Session s, int gameId) {
+        System.out.print("Resign this game? Type 'yes' to confirm: ");
+        if (!scanner.hasNextLine()) {
+            return;
+        }
+        String ans = scanner.nextLine().trim().toLowerCase();
+        if (ans.equals("yes") || ans.equals("y")) {
+            wsSend(s, "RESIGN", gameId, null);
+        } else {
+            System.out.println("Resign cancelled.");
         }
     }
 
@@ -458,7 +515,14 @@ public class ChessClient {
     }
 
     private void printGameplayHelp() {
-        System.out.println("Gameplay: help | redraw | move sr sc er ec | leave");
+        System.out.println("Gameplay commands:");
+        System.out.println("  help              List these commands");
+        System.out.println("  redraw            Redraw the board (keeps move highlights if any)");
+        System.out.println("  move r0 c0 r1 c1  Move from square (row,col) to (row,col), using 1-8");
+        System.out.println("  highlight r c     Show legal moves for the piece on that square (local only)");
+        System.out.println("  resign            Forfeit; asks for confirmation before sending");
+        System.out.println("  leave             Leave the game and return to the main menu");
+        System.out.println("  quit / exit       Reminder: leave the game first, then quit from the menu");
     }
 }
 

@@ -5,24 +5,35 @@ import chess.ChessGame;
 import chess.ChessPiece;
 import chess.ChessPosition;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
 public final class BoardRenderer {
 
     private BoardRenderer() {
     }
 
     private static boolean isLightSquare(int row, int col) {
-        // Keeps chess rule: a8 and h1 should be the "lighter" color.
         return (row + col) % 2 != 0;
     }
 
     public static void drawInitialBoard(ChessGame game, ChessGame.TeamColor perspective) {
+        drawBoard(game, perspective, null, null);
+    }
+
+    public static void drawBoard(ChessGame game, ChessGame.TeamColor perspective,
+                                 ChessPosition from, Collection<ChessPosition> legalEnds) {
         if (game == null || perspective == null) {
             return;
         }
-        drawBoard(game.getBoard(), perspective);
+        Set<ChessPosition> ends = legalEnds == null ? Collections.emptySet() : new HashSet<>(legalEnds);
+        drawCells(game.getBoard(), perspective, from, ends);
     }
 
-    private static void drawBoard(ChessBoard board, ChessGame.TeamColor perspective) {
+    private static void drawCells(ChessBoard board, ChessGame.TeamColor perspective,
+                                  ChessPosition from, Set<ChessPosition> legalEnds) {
         if (board == null) {
             return;
         }
@@ -48,10 +59,17 @@ public final class BoardRenderer {
                 ChessPosition pos = new ChessPosition(row, col);
                 ChessPiece piece = board.getPiece(pos);
 
-                boolean lightSquare = isLightSquare(row, col);
-                String bg = lightSquare
-                        ? EscapeSequences.SET_BG_COLOR_LIGHT_BLUE
-                        : EscapeSequences.SET_BG_COLOR_DARK_BLUE;
+                String bg;
+                if (from != null && pos.equals(from)) {
+                    bg = EscapeSequences.SET_BG_COLOR_YELLOW;
+                } else if (legalEnds.contains(pos)) {
+                    bg = EscapeSequences.SET_BG_COLOR_DARK_GREEN;
+                } else {
+                    boolean lightSquare = isLightSquare(row, col);
+                    bg = lightSquare
+                            ? EscapeSequences.SET_BG_COLOR_LIGHT_BLUE
+                            : EscapeSequences.SET_BG_COLOR_DARK_BLUE;
+                }
 
                 if (piece == null) {
                     System.out.print(bg + EscapeSequences.RESET_TEXT_COLOR + EscapeSequences.EMPTY + EscapeSequences.RESET_BG_COLOR);
@@ -83,4 +101,3 @@ public final class BoardRenderer {
         };
     }
 }
-
