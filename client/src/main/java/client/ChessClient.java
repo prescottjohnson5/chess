@@ -1,22 +1,38 @@
 package client;
 
 import chess.ChessGame;
+import chess.ChessMove;
+import chess.ChessPosition;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import jakarta.websocket.ClientEndpointConfig;
+import jakarta.websocket.Endpoint;
+import jakarta.websocket.EndpointConfig;
+import jakarta.websocket.Session;
 import model.AuthData;
 import model.GameData;
+import org.glassfish.tyrus.client.ClientManager;
 import ui.BoardRenderer;
 
+import java.net.URI;
 import java.util.Scanner;
 
 public class ChessClient {
 
     private final ServerFacade facade;
+    private final String wsHost;
+    private final int wsPort;
     private final Scanner scanner;
+    private final Gson gson = new Gson();
 
     private AuthData auth;
     private GameData[] lastListedGames;
 
-    public ChessClient(ServerFacade facade) {
+    public ChessClient(ServerFacade facade, String host, int port) {
         this.facade = facade;
+        this.wsHost = host;
+        this.wsPort = port;
         this.scanner = new Scanner(System.in);
     }
 
@@ -257,7 +273,7 @@ public class ChessClient {
         try {
             facade.joinGame(auth.authToken(), team, selected.gameID());
             System.out.println("Joined game successfully!");
-            BoardRenderer.drawInitialBoard(selected.game(), team);
+            gameplayUi(selected.gameID(), team);
         } catch (ServerFacadeException e) {
             System.out.println(e.getMessage());
         }
@@ -273,8 +289,8 @@ public class ChessClient {
             return;
         }
         GameData selected = lastListedGames[gameIndex - 1];
-        System.out.println("Joined game successfully!");
-        BoardRenderer.drawInitialBoard(selected.game(), ChessGame.TeamColor.WHITE);
+        System.out.println("Observing game (WebSocket)…");
+        gameplayUi(selected.gameID(), ChessGame.TeamColor.WHITE);
     }
 
     private int readGameNumber(int max) {
@@ -323,6 +339,149 @@ public class ChessClient {
             return ChessGame.TeamColor.BLACK;
         }
         return null;
+    }
+
+    private void gameplayUi(int gameId, ChessGame.TeamColor perspective) {
+        String wsUrl = "ws://" + wsHost + ":" + wsPort + "/ws";
+        Session[] sessionHolder = new Session[1];
+        ChessGame[] latestGame = new ChessGame[1];
+        Endpoint endpoint = new Endpoint() {
+            @Override
+            public void onOpen(Session session, EndpointConfig config) {
+                sessionHolder[0] = session;
+                session.addMessageHandler(String.class, json -> handleGameplayServerMessage(json, latestGame, perspective));
+                try {
+                    JsonObject cmd = new JsonObject();
+                    cmd.addProperty("commandType", "CONNECT");
+                    cmd.addProperty("authToken", auth.authToken());
+                    cmd.addProperty("gameID", gameId);
+                    session.getBasicRemote().sendText(gson.toJson(cmd));
+                } catch (Exception e) {
+                    System.out.println("Failed to send CONNECT: " + e.getMessage());
+                }
+            }
+        };
+        try {
+            ClientManager client = ClientManager.createClient();
+            client.connectToServer(endpoint, ClientEndpointConfig.Builder.create().build(), URI.create(wsUrl));
+        } catch (Exception e) {
+            System.out.println("Could not open WebSocket: " + e.getMessage());
+            return;
+        }
+        printGameplayHelp();
+        try {
+            commandLoop:
+            while (true) {
+                System.out.print("> ");
+                if (!scanner.hasNextLine()) {
+                    break;
+                }
+                String line = scanner.nextLine();
+                if (line == null) {
+                    break;
+                }
+                String trimmed = line.trim();
+                if (trimmed.isEmpty()) {
+                    continue;
+                }
+                String[] parts = trimmed.toLowerCase().split("\\s+");
+                String verb = parts[0];
+                switch (verb) {
+                    case "help" -> printGameplayHelp();
+                    case "redraw" -> redrawBoard(latestGame[0], perspective);
+                    case "leave" -> {
+                        sendUserCommand(sessionHolder[0], "LEAVE", gameId, null);
+                        break commandLoop;
+                    }
+                    case "move" -> {
+                        if (parts.length != 5) {
+                            System.out.println("Usage: move <startRow> <startCol> <endRow> <endCol> (rows/cols 1-8)");
+                            continue;
+                        }
+                        try {
+                            int sr = Integer.parseInt(parts[1]);
+                            int sc = Integer.parseInt(parts[2]);
+                            int er = Integer.parseInt(parts[3]);
+                            int ec = Integer.parseInt(parts[4]);
+                            ChessMove move = new ChessMove(new ChessPosition(sr, sc), new ChessPosition(er, ec), null);
+                            sendMakeMove(sessionHolder[0], gameId, move);
+                        } catch (NumberFormatException e) {
+                            System.out.println("Move requires four integers.");
+                        }
+                    }
+                    case "quit", "exit" -> System.out.println(
+                            "You are in a game. Use `leave` to return to the menu, then `quit` to exit the program.");
+                    default -> System.out.println("Unknown command. Type `help`.");
+                }
+            }
+        } finally {
+            try {
+                if (sessionHolder[0] != null && sessionHolder[0].isOpen()) {
+                    sessionHolder[0].close();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        System.out.println("Left the game.");
+    }
+
+    private void handleGameplayServerMessage(String json, ChessGame[] latestGame, ChessGame.TeamColor perspective) {
+        try {
+            JsonObject o = JsonParser.parseString(json).getAsJsonObject();
+            String type = o.get("serverMessageType").getAsString();
+            switch (type) {
+                case "LOAD_GAME" -> {
+                    ChessGame game = gson.fromJson(o.get("game"), ChessGame.class);
+                    latestGame[0] = game;
+                    BoardRenderer.drawInitialBoard(game, perspective);
+                }
+                case "NOTIFICATION" -> System.out.println(o.get("message").getAsString());
+                case "ERROR" -> System.out.println(o.get("errorMessage").getAsString());
+                default -> {
+                }
+            }
+        } catch (RuntimeException e) {
+            System.out.println("(Could not parse server message)");
+        }
+    }
+
+    private void redrawBoard(ChessGame game, ChessGame.TeamColor perspective) {
+        if (game == null) {
+            System.out.println("No board loaded yet.");
+            return;
+        }
+        BoardRenderer.drawInitialBoard(game, perspective);
+    }
+
+    private void sendUserCommand(Session session, String commandType, int gameId, ChessMove move) {
+        if (session == null || !session.isOpen()) {
+            System.out.println("Not connected.");
+            return;
+        }
+        try {
+            JsonObject cmd = new JsonObject();
+            cmd.addProperty("commandType", commandType);
+            cmd.addProperty("authToken", auth.authToken());
+            cmd.addProperty("gameID", gameId);
+            if (move != null) {
+                cmd.add("move", gson.toJsonTree(move));
+            }
+            session.getBasicRemote().sendText(gson.toJson(cmd));
+        } catch (Exception e) {
+            System.out.println("Send failed: " + e.getMessage());
+        }
+    }
+
+    private void sendMakeMove(Session session, int gameId, ChessMove move) {
+        sendUserCommand(session, "MAKE_MOVE", gameId, move);
+    }
+
+    private void printGameplayHelp() {
+        System.out.println("Gameplay commands:");
+        System.out.println("  help              What you can do here");
+        System.out.println("  redraw            Redraw the board");
+        System.out.println("  move r0 c0 r1 c1  Move from (r0,c0) to (r1,c1), rows/cols 1-8");
+        System.out.println("  leave             Leave the game (back to post-login menu)");
     }
 }
 
