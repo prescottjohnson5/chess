@@ -17,7 +17,6 @@ public class ChessGame {
 
     private ChessBoard currentBoard;
     private TeamColor currentTurn;
-    /** When true, no further moves are allowed (e.g. after resignation). */
     private boolean gameOver;
 
     @Override
