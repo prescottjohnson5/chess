@@ -19,10 +19,6 @@ public final class BoardRenderer {
         return (row + col) % 2 != 0;
     }
 
-    public static void drawInitialBoard(ChessGame game, ChessGame.TeamColor perspective) {
-        drawBoard(game, perspective, null, null);
-    }
-
     public static void drawBoard(ChessGame game, ChessGame.TeamColor perspective,
                                  ChessPosition from, Collection<ChessPosition> legalEnds) {
         if (game == null || perspective == null) {
