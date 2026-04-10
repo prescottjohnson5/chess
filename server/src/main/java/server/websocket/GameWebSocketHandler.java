@@ -188,7 +188,6 @@ public class GameWebSocketHandler {
         broadcast(c.gameID, new ServerMessage(NOTIFICATION, c.username + " resigned", null, null), null);
     }
 
-    /** true if request should stop (auth or game id mismatch). */
     private boolean badAuthOrGame(WsContext ctx, JsonObject json, Conn c) throws DataAccessException {
         AuthData a = authDAO.getAuth(str(json, "authToken"));
         if (a == null || !a.username().equals(c.username)) {

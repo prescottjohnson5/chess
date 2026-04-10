@@ -77,9 +77,6 @@ public class ChessClient {
         }
     }
 
-    /**
-     * Runs postlogin UI; returns true if the user quit the client from postlogin while still logged in.
-     */
     private boolean postloginAndExitIfStillAuthed() {
         postloginUi();
         return auth != null;
