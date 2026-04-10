@@ -13,6 +13,6 @@ public class ClientMain {
         }
 
         ServerFacade facade = new ServerFacade(host, port);
-        new ChessClient(facade).run();
+        new ChessClient(facade, host, port).run();
     }
 }
