@@ -22,13 +22,17 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static chess.ChessGame.TeamColor;
+import static websocket.messages.ServerMessage.ServerMessageType.ERROR;
+import static websocket.messages.ServerMessage.ServerMessageType.LOAD_GAME;
+import static websocket.messages.ServerMessage.ServerMessageType.NOTIFICATION;
+
 public class GameWebSocketHandler {
 
     private final GameDAO gameDAO;
     private final AuthDAO authDAO;
     private final Gson gson = new Gson();
-
-    private final ConcurrentHashMap<Integer, Set<WsContext>> sessionsByGame = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Integer, Set<WsContext>> byGame = new ConcurrentHashMap<>();
 
     public GameWebSocketHandler(GameDAO gameDAO, AuthDAO authDAO) {
         this.gameDAO = gameDAO;
@@ -38,313 +42,251 @@ public class GameWebSocketHandler {
     public void onMessage(WsMessageContext ctx) {
         try {
             JsonObject json = JsonParser.parseString(ctx.message()).getAsJsonObject();
-            String cmd = json.get("commandType").getAsString();
-            switch (cmd) {
-                case "CONNECT" -> handleConnect(ctx, json);
-                case "MAKE_MOVE" -> handleMakeMove(ctx, json);
-                case "LEAVE" -> handleLeave(ctx, json);
-                case "RESIGN" -> handleResign(ctx, json);
-                default -> sendError(ctx, "Error: unknown command");
+            switch (json.get("commandType").getAsString()) {
+                case "CONNECT" -> connect(ctx, json);
+                case "MAKE_MOVE" -> move(ctx, json);
+                case "LEAVE" -> leave(ctx, json);
+                case "RESIGN" -> resign(ctx, json);
+                default -> err(ctx, "Error: unknown command");
             }
         } catch (DataAccessException e) {
-            sendError(ctx, "Error: " + e.getMessage());
+            err(ctx, "Error: " + e.getMessage());
         } catch (RuntimeException e) {
-            sendError(ctx, "Error: bad request");
+            err(ctx, "Error: bad request");
         }
     }
 
     public void onClose(WsCloseContext ctx) {
-        removeSession(ctx);
+        unregister(ctx);
     }
 
-    private void handleConnect(WsMessageContext ctx, JsonObject json) throws DataAccessException {
+    private void connect(WsMessageContext ctx, JsonObject json) throws DataAccessException {
         if (Boolean.TRUE.equals(ctx.attribute("joined"))) {
-            sendError(ctx, "Error: already connected to a game");
+            err(ctx, "Error: already connected to a game");
             return;
         }
-        String authToken = getString(json, "authToken");
-        int gameID = parseGameId(json.get("gameID"));
-        AuthData auth = authDAO.getAuth(authToken);
+        AuthData auth = authDAO.getAuth(str(json, "authToken"));
         if (auth == null) {
-            sendError(ctx, "Error: unauthorized");
+            err(ctx, "Error: unauthorized");
             return;
         }
+        int gameID = gameId(json.get("gameID"));
         GameData game = gameDAO.getGame(gameID);
         if (game == null) {
-            sendError(ctx, "Error: game not found");
+            err(ctx, "Error: game not found");
             return;
         }
-        PlayerRole role = resolveRole(auth.username(), game);
-        registerSession(gameID, ctx);
+        TeamColor side = side(auth.username(), game);
+        byGame.computeIfAbsent(gameID, g -> ConcurrentHashMap.newKeySet()).add(ctx);
         ctx.attribute("joined", true);
         ctx.attribute("gameID", gameID);
         ctx.attribute("username", auth.username());
-        ctx.attribute("role", role);
-        sendLoadGame(ctx, game.game());
-        String note = switch (role) {
-            case WHITE -> auth.username() + " joined as white";
-            case BLACK -> auth.username() + " joined as black";
-            case OBSERVER -> auth.username() + " joined as observer";
-        };
-        broadcastNotification(gameID, note, ctx);
+        ctx.attribute("side", side);
+        ctx.send(gson.toJson(new ServerMessage(LOAD_GAME, null, null, game.game())));
+        String who = auth.username();
+        String msg = side == TeamColor.WHITE ? who + " joined as white"
+                : side == TeamColor.BLACK ? who + " joined as black"
+                : who + " joined as observer";
+        notifyOthers(gameID, msg, ctx);
     }
 
-    private void handleMakeMove(WsMessageContext ctx, JsonObject json) throws DataAccessException {
-        SessionInfo info = requireSession(ctx);
-        if (info == null) {
+    private void move(WsMessageContext ctx, JsonObject json) throws DataAccessException {
+        Conn c = conn(ctx);
+        if (c == null) {
             return;
         }
-        if (info.role == PlayerRole.OBSERVER) {
-            sendError(ctx, "Error: observers cannot move");
+        if (c.side == null) {
+            err(ctx, "Error: observers cannot move");
             return;
         }
-        String authToken = getString(json, "authToken");
-        AuthData auth = authDAO.getAuth(authToken);
-        if (auth == null || !auth.username().equals(info.username)) {
-            sendError(ctx, "Error: unauthorized");
-            return;
-        }
-        int gameID = parseGameId(json.get("gameID"));
-        if (gameID != info.gameID) {
-            sendError(ctx, "Error: wrong game");
+        if (badAuthOrGame(ctx, json, c)) {
             return;
         }
         if (!json.has("move") || json.get("move").isJsonNull()) {
-            sendError(ctx, "Error: missing move");
+            err(ctx, "Error: missing move");
             return;
         }
-        ChessMove move = gson.fromJson(json.get("move"), ChessMove.class);
-        GameData game = gameDAO.getGame(gameID);
-        if (game == null) {
-            sendError(ctx, "Error: game not found");
+        ChessMove mv = gson.fromJson(json.get("move"), ChessMove.class);
+        GameData row = gameDAO.getGame(c.gameID);
+        if (row == null) {
+            err(ctx, "Error: game not found");
             return;
         }
-        ChessGame chess = game.game();
-        var piece = chess.getBoard().getPiece(move.getStartPosition());
+        ChessGame g = row.game();
+        var piece = g.getBoard().getPiece(mv.getStartPosition());
         if (piece == null) {
-            sendError(ctx, "Error: no piece at start");
+            err(ctx, "Error: no piece at start");
             return;
         }
-        ChessGame.TeamColor playerColor = info.role == PlayerRole.WHITE ? ChessGame.TeamColor.WHITE : ChessGame.TeamColor.BLACK;
-        if (piece.getTeamColor() != playerColor) {
-            sendError(ctx, "Error: cannot move opponent's piece");
-            return;
-        }
-        if (chess.getTeamTurn() != playerColor) {
-            sendError(ctx, "Error: wrong turn");
+        if (piece.getTeamColor() != c.side || g.getTeamTurn() != c.side) {
+            err(ctx, "Error: wrong turn");
             return;
         }
         try {
-            chess.makeMove(move);
+            g.makeMove(mv);
         } catch (InvalidMoveException e) {
-            sendError(ctx, "Error: " + e.getMessage());
+            err(ctx, "Error: " + e.getMessage());
             return;
         }
-        gameDAO.updateGame(new GameData(game.gameID(), game.whiteUsername(), game.blackUsername(), game.gameName(), chess));
-        game = gameDAO.getGame(gameID);
-        broadcastLoadGame(gameID, game.game());
-        String moveText = formatMove(move);
-        broadcastNotification(gameID, info.username + " moved: " + moveText, ctx);
-        ChessGame.TeamColor toMove = game.game().getTeamTurn();
-        if (game.game().isInCheckmate(toMove)) {
-            String victim = toMove == ChessGame.TeamColor.WHITE ? game.whiteUsername() : game.blackUsername();
-            String name = victim != null ? victim : "player";
-            broadcastNotification(gameID, name + " is in checkmate", null);
+        gameDAO.updateGame(new GameData(row.gameID(), row.whiteUsername(), row.blackUsername(), row.gameName(), g));
+        row = gameDAO.getGame(c.gameID);
+        ChessGame updated = row.game();
+        broadcast(c.gameID, new ServerMessage(LOAD_GAME, null, null, updated), null);
+        notifyOthers(c.gameID, c.username + " moved: " + moveStr(mv), ctx);
+        TeamColor next = updated.getTeamTurn();
+        if (updated.isInCheckmate(next)) {
+            String name = next == TeamColor.WHITE ? row.whiteUsername() : row.blackUsername();
+            broadcast(c.gameID, new ServerMessage(NOTIFICATION, (name != null ? name : "player") + " is in checkmate", null, null), null);
         }
     }
 
-    private void handleLeave(WsMessageContext ctx, JsonObject json) throws DataAccessException {
-        SessionInfo info = requireSession(ctx);
-        if (info == null) {
+    private void leave(WsMessageContext ctx, JsonObject json) throws DataAccessException {
+        Conn c = conn(ctx);
+        if (c == null) {
             return;
         }
-        String authToken = getString(json, "authToken");
-        AuthData auth = authDAO.getAuth(authToken);
-        if (auth == null || !auth.username().equals(info.username)) {
-            sendError(ctx, "Error: unauthorized");
+        if (badAuthOrGame(ctx, json, c)) {
             return;
         }
-        int gameID = parseGameId(json.get("gameID"));
-        if (gameID != info.gameID) {
-            sendError(ctx, "Error: wrong game");
-            return;
+        GameData row = gameDAO.getGame(c.gameID);
+        if (row != null) {
+            if (c.side == TeamColor.WHITE) {
+                gameDAO.updateGame(new GameData(row.gameID(), null, row.blackUsername(), row.gameName(), row.game()));
+            } else if (c.side == TeamColor.BLACK) {
+                gameDAO.updateGame(new GameData(row.gameID(), row.whiteUsername(), null, row.gameName(), row.game()));
+            }
         }
-        GameData game = gameDAO.getGame(gameID);
-        if (game != null && info.role == PlayerRole.WHITE) {
-            gameDAO.updateGame(new GameData(game.gameID(), null, game.blackUsername(), game.gameName(), game.game()));
-        } else if (game != null && info.role == PlayerRole.BLACK) {
-            gameDAO.updateGame(new GameData(game.gameID(), game.whiteUsername(), null, game.gameName(), game.game()));
-        }
-        removeSession(ctx);
+        unregister(ctx);
         ctx.attribute("joined", false);
-        broadcastNotification(gameID, info.username + " left the game", ctx);
+        notifyOthers(c.gameID, c.username + " left the game", ctx);
     }
 
-    private void handleResign(WsMessageContext ctx, JsonObject json) throws DataAccessException {
-        SessionInfo info = requireSession(ctx);
-        if (info == null) {
+    private void resign(WsMessageContext ctx, JsonObject json) throws DataAccessException {
+        Conn c = conn(ctx);
+        if (c == null) {
             return;
         }
-        if (info.role == PlayerRole.OBSERVER) {
-            sendError(ctx, "Error: observers cannot resign");
+        if (c.side == null) {
+            err(ctx, "Error: observers cannot resign");
             return;
         }
-        String authToken = getString(json, "authToken");
-        AuthData auth = authDAO.getAuth(authToken);
-        if (auth == null || !auth.username().equals(info.username)) {
-            sendError(ctx, "Error: unauthorized");
+        if (badAuthOrGame(ctx, json, c)) {
             return;
         }
-        int gameID = parseGameId(json.get("gameID"));
-        if (gameID != info.gameID) {
-            sendError(ctx, "Error: wrong game");
+        GameData row = gameDAO.getGame(c.gameID);
+        if (row == null) {
+            err(ctx, "Error: game not found");
             return;
         }
-        GameData game = gameDAO.getGame(gameID);
-        if (game == null) {
-            sendError(ctx, "Error: game not found");
+        ChessGame g = row.game();
+        if (g.isGameOver()) {
+            err(ctx, "Error: game is already over");
             return;
         }
-        ChessGame chess = game.game();
-        if (chess.isGameOver()) {
-            sendError(ctx, "Error: game is already over");
-            return;
-        }
-        chess.setGameOver(true);
-        gameDAO.updateGame(new GameData(game.gameID(), game.whiteUsername(), game.blackUsername(), game.gameName(), chess));
-        broadcastNotification(gameID, info.username + " resigned", null);
+        g.setGameOver(true);
+        gameDAO.updateGame(new GameData(row.gameID(), row.whiteUsername(), row.blackUsername(), row.gameName(), g));
+        broadcast(c.gameID, new ServerMessage(NOTIFICATION, c.username + " resigned", null, null), null);
     }
 
-    private SessionInfo requireSession(WsContext ctx) {
-        Integer gameID = ctx.attribute("gameID");
-        String username = ctx.attribute("username");
-        PlayerRole role = ctx.attribute("role");
-        if (!Boolean.TRUE.equals(ctx.attribute("joined")) || gameID == null || username == null || role == null) {
-            sendError(ctx, "Error: not connected to a game");
+    /** true if request should stop (auth or game id mismatch). */
+    private boolean badAuthOrGame(WsContext ctx, JsonObject json, Conn c) throws DataAccessException {
+        AuthData a = authDAO.getAuth(str(json, "authToken"));
+        if (a == null || !a.username().equals(c.username)) {
+            err(ctx, "Error: unauthorized");
+            return true;
+        }
+        if (gameId(json.get("gameID")) != c.gameID) {
+            err(ctx, "Error: wrong game");
+            return true;
+        }
+        return false;
+    }
+
+    private Conn conn(WsContext ctx) {
+        if (!Boolean.TRUE.equals(ctx.attribute("joined"))) {
+            err(ctx, "Error: not connected to a game");
             return null;
         }
-        return new SessionInfo(gameID, username, role);
+        Integer gid = ctx.attribute("gameID");
+        String user = ctx.attribute("username");
+        if (gid == null || user == null) {
+            err(ctx, "Error: not connected to a game");
+            return null;
+        }
+        return new Conn(gid, user, ctx.attribute("side"));
     }
 
-    private void registerSession(int gameID, WsContext ctx) {
-        sessionsByGame.computeIfAbsent(gameID, g -> ConcurrentHashMap.newKeySet()).add(ctx);
-    }
-
-    private void removeSession(WsContext ctx) {
-        Integer gameID = ctx.attribute("gameID");
-        if (gameID == null) {
+    private void broadcast(int gameID, ServerMessage msg, WsContext skip) {
+        String text = gson.toJson(msg);
+        Set<WsContext> set = byGame.get(gameID);
+        if (set == null) {
             return;
         }
-        Set<WsContext> set = sessionsByGame.get(gameID);
+        for (WsContext s : Set.copyOf(set)) {
+            if (skip != null && skip.sessionId().equals(s.sessionId())) {
+                continue;
+            }
+            try {
+                s.send(text);
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private void notifyOthers(int gameID, String text, WsContext except) {
+        broadcast(gameID, new ServerMessage(NOTIFICATION, text, null, null), except);
+    }
+
+    private void unregister(WsContext ctx) {
+        Integer gid = ctx.attribute("gameID");
+        if (gid == null) {
+            return;
+        }
+        Set<WsContext> set = byGame.get(gid);
         if (set != null) {
             set.remove(ctx);
             if (set.isEmpty()) {
-                sessionsByGame.remove(gameID, set);
+                byGame.remove(gid, set);
             }
         }
     }
 
-    private void broadcastLoadGame(int gameID, ChessGame game) {
-        String payload = gson.toJson(loadGameMessage(game));
-        for (WsContext s : copySessions(gameID)) {
-            safeSend(s, payload);
+    private void err(WsContext ctx, String m) {
+        if (!m.toLowerCase(Locale.ROOT).contains("error")) {
+            m = "Error: " + m;
         }
+        ctx.send(gson.toJson(new ServerMessage(ERROR, null, m, null)));
     }
 
-    private void broadcastNotification(int gameID, String text, WsContext except) {
-        String payload = gson.toJson(notificationMessage(text));
-        for (WsContext s : copySessions(gameID)) {
-            if (except != null && s.sessionId().equals(except.sessionId())) {
-                continue;
-            }
-            safeSend(s, payload);
-        }
-    }
-
-    private Set<WsContext> copySessions(int gameID) {
-        Set<WsContext> set = sessionsByGame.get(gameID);
-        if (set == null) {
-            return Set.of();
-        }
-        return Set.copyOf(set);
-    }
-
-    private static void safeSend(WsContext s, String json) {
-        try {
-            s.send(json);
-        } catch (Exception ignored) {
-            // Session may be closed; drop message
-        }
-    }
-
-    private void sendLoadGame(WsContext ctx, ChessGame game) {
-        ctx.send(gson.toJson(loadGameMessage(game)));
-    }
-
-    private static ServerMessage loadGameMessage(ChessGame game) {
-        return new ServerMessage(ServerMessage.ServerMessageType.LOAD_GAME, null, null, game);
-    }
-
-    private static ServerMessage notificationMessage(String text) {
-        return new ServerMessage(ServerMessage.ServerMessageType.NOTIFICATION, text, null, null);
-    }
-
-    private void sendError(WsContext ctx, String message) {
-        if (!message.toLowerCase(Locale.ROOT).contains("error")) {
-            message = "Error: " + message;
-        }
-        ctx.send(gson.toJson(new ServerMessage(ServerMessage.ServerMessageType.ERROR, null, message, null)));
-    }
-
-    private static String getString(JsonObject json, String key) {
+    private static String str(JsonObject json, String key) {
         JsonElement e = json.get(key);
-        if (e == null || e.isJsonNull()) {
-            return null;
-        }
-        return e.getAsString();
+        return e == null || e.isJsonNull() ? null : e.getAsString();
     }
 
-    private static int parseGameId(JsonElement e) {
+    private static int gameId(JsonElement e) {
         if (e == null || e.isJsonNull()) {
-            throw new IllegalArgumentException("missing gameID");
+            throw new IllegalArgumentException("gameID");
         }
-        if (e.isJsonPrimitive()) {
-            JsonPrimitive p = e.getAsJsonPrimitive();
-            if (p.isNumber()) {
-                return p.getAsInt();
-            }
-            if (p.isString()) {
-                return Integer.parseInt(p.getAsString());
-            }
-        }
-        throw new IllegalArgumentException("bad gameID");
+        JsonPrimitive p = e.getAsJsonPrimitive();
+        return p.isNumber() ? p.getAsInt() : Integer.parseInt(p.getAsString());
     }
 
-    private static PlayerRole resolveRole(String username, GameData game) {
+    private static TeamColor side(String username, GameData game) {
         if (username.equals(game.whiteUsername())) {
-            return PlayerRole.WHITE;
+            return TeamColor.WHITE;
         }
         if (username.equals(game.blackUsername())) {
-            return PlayerRole.BLACK;
+            return TeamColor.BLACK;
         }
-        return PlayerRole.OBSERVER;
+        return null;
     }
 
-    private static String formatMove(ChessMove move) {
-        if (move == null) {
-            return "";
-        }
-        var a = move.getStartPosition();
-        var b = move.getEndPosition();
+    private static String moveStr(ChessMove m) {
+        var a = m.getStartPosition();
+        var b = m.getEndPosition();
         return a.getRow() + "," + a.getColumn() + " -> " + b.getRow() + "," + b.getColumn();
     }
 
-    private enum PlayerRole {
-        WHITE,
-        BLACK,
-        OBSERVER
-    }
-
-    private record SessionInfo(int gameID, String username, PlayerRole role) {
+    private record Conn(int gameID, String username, TeamColor side) {
     }
 }
