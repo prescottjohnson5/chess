@@ -17,6 +17,8 @@ public class ChessGame {
 
     private ChessBoard currentBoard;
     private TeamColor currentTurn;
+    /** When true, no further moves are allowed (e.g. after resignation). */
+    private boolean gameOver;
 
     @Override
     public boolean equals(Object o) {
@@ -28,18 +30,27 @@ public class ChessGame {
         }
         ChessGame chessGame = (ChessGame) o;
         return Objects.equals(currentBoard, chessGame.currentBoard) &&
-            currentTurn == chessGame.currentTurn;
+            currentTurn == chessGame.currentTurn &&
+            gameOver == chessGame.gameOver;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(currentBoard, currentTurn);
+        return Objects.hash(currentBoard, currentTurn, gameOver);
     }
 
     public ChessGame() {
         currentBoard = new ChessBoard();
         currentBoard.resetBoard();
         currentTurn = TeamColor.WHITE;
+    }
+
+    public boolean isGameOver() {
+        return gameOver;
+    }
+
+    public void setGameOver(boolean gameOver) {
+        this.gameOver = gameOver;
     }
 
     /**
@@ -118,6 +129,9 @@ public class ChessGame {
      * @throws InvalidMoveException if move is invalid
      */
     public void makeMove(ChessMove move) throws InvalidMoveException {
+        if (gameOver) {
+            throw new InvalidMoveException("Game is over");
+        }
         ChessPiece startPiece = currentBoard.getPiece(move.getStartPosition());
         if (startPiece == null) {
             throw new InvalidMoveException("No piece at start position");
